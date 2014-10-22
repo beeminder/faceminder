@@ -7,5 +7,8 @@ GET     /                           controllers.Application.index
 GET     /example                    controllers.ExampleController.index
 POST    /example/form               controllers.ExampleController.update
 
+GET     /auth/:provider             controllers.OAuth2Controller.authenticate(provider)
+GET     /auth/:provider/callback    controllers.OAuth2Controller.callback(provider)
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
