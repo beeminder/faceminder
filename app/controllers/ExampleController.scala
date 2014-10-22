@@ -1,12 +1,13 @@
 package controllers
 
-import models.{ExampleModel, Dad}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.db.slick.DB
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
 import scala.slick.driver.SQLiteDriver.simple._
+
+import models._
 
 
 object ExampleController extends Controller {
@@ -33,6 +34,10 @@ object ExampleController extends Controller {
     // Referenced in conf/routes as action when page is visited
     def index = Action {
         // Updates form with ExampleModel's (singleton object) current value
+
+        var user = new User(None, "santino", "", "", Seq(), None, None)
+        user.insert()
+
         Ok(views.html.example(name = dad.name))
 
         // If id had been passed through
