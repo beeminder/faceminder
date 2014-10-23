@@ -42,7 +42,10 @@ object Goal {
 
     implicit def implicitGoalColumnMapper = MappedColumnType.base[Seq[Goal], String](
         sg => sg.map { g => g.id.get.toString }.mkString(";"),
-        s => s.split(";").map(i => Goal.getById(i.toInt).get)
+        s => s match {
+            case "" => Seq()
+            case _ => s.split(";").map(i => Goal.getById(i.toInt).get)
+        }
     )
 }
 

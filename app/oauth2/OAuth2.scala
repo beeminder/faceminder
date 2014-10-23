@@ -12,7 +12,9 @@ import play.api.Logger
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.scala_tools.time.Imports.DateTime
 
+case class AuthToken(token: String, expiry: DateTime)
 
 /**
  * This is the root OAuth2 implementation class that handle web access to the OAuth2 Servers.  Specific OAuth2 API classes are customized for each service provider to provide streamlined access.

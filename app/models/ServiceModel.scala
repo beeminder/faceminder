@@ -3,24 +3,24 @@ package models
 import play.api.Play.current
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
-
-object ServiceProvider extends Enumeration {
-    type ServiceProvider = Value
-    val Beeminder = Value("Beeminder")
-    val Facebook = Value("Facebook")
-
-    implicit def implicitProviderColumnMapper = MappedColumnType.base[ServiceProvider, String](
-        sp => sp.toString,
-        s => ServiceProvider.withName(s)
-    )
-}
+import com.github.nscala_time.time.Imports._
+import com.typesafe.config.ConfigFactory
 
 case class Service(
         var id: Option[Int] = None,
         owner: User,
-        provider: ServiceProvider.ServiceProvider,
-        token: String,
-        secret: String) {
+        provider: String,
+        var token: String,
+        var expiry: DateTime) {
+
+    // make sure we have a valid provider
+    // TODO(sandy): this should be smarter than it is.
+    provider match {
+        case "facebook" => // do nothing
+        case "beeminder" => // do nothing
+        case _ => throw new IllegalArgumentException
+    }
+
     private val Table = TableQuery[ServiceModel]
     def insert() = {
         // Ensure this Event hasn't already been put into the database
@@ -44,9 +44,31 @@ case class Service(
             Table.filter(_.id === id.get).update(this)
         }
     }
+
+    def refresh() = {
+        if (provider == "facebook") {
+           // TODO(sandy): make this invalidate the token if it fails
+            val authToken = Service.facebook.refreshToken(token).get
+            token = authToken.token
+            expiry = authToken.expiry
+            save()
+        }
+    }
 }
 
 object Service {
+    val conf = ConfigFactory.load
+
+    val facebook = new oauth2.FaceBook(
+        conf.getString("facebook.appID"),
+        conf.getString("facebook.secret")
+    )
+
+    val beeminder = new oauth2.Beeminder(
+        conf.getString("beeminder.appID"),
+        conf.getString("beeminder.secret")
+    )
+
     private val Table = TableQuery[ServiceModel]
     def getById(id: Int): Option[Service] = {
         DB.withSession { implicit session =>
@@ -69,15 +91,21 @@ object Service {
 
 
 class ServiceModel(tag: Tag) extends Table[Service](tag, "Service") {
-    import ServiceProvider._
+    import utils.DateConversions._
 
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def owner = column[User]("owner")
-    def provider = column[ServiceProvider]("provider")
+    def provider = column[String]("provider")
     def token = column[String]("token")
-    def secret = column[String]("secret")
+    def expiry = column[DateTime]("expiry")
 
     def service = Service.apply _
-    def * = (id.?, owner, provider, token, secret) <> (service.tupled, Service.unapply _)
+    def * = (
+        id.?,
+        owner,
+        provider,
+        token,
+        expiry
+    ) <> (service.tupled, Service.unapply _)
 }
 
