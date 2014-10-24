@@ -75,6 +75,12 @@ object Service {
         }
     }
 
+    def getByProvider(provider: String): Seq[Service] = {
+        DB.withSession { implicit session =>
+            Table.filter(_.provider === provider).list
+        }
+    }
+
     implicit def implicitServiceColumnMapper = MappedColumnType.base[Service, Int](
         s => s.id.get,
         i => Service.getById(i).get

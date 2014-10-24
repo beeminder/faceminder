@@ -30,6 +30,10 @@ case class Goal(
             Table.filter(_.id === id.get).update(this)
         }
     }
+
+    def update() = {
+
+    }
 }
 
 object Goal {
@@ -37,6 +41,12 @@ object Goal {
     def getById(id: Int): Option[Goal] = {
         DB.withSession { implicit session =>
             Table.filter(_.id === id).firstOption
+        }
+    }
+
+    def getAll(): Seq[Goal] = {
+        DB.withSession { implicit session =>
+            Table.list
         }
     }
 
