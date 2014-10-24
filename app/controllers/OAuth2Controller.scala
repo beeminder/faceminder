@@ -5,23 +5,37 @@ import play.api.mvc._
 import play.api.libs.json._
 
 import oauth2._
-
+import actions._
 import models._
 
 object OAuth2Controller extends Controller {
-    def authenticate(provider: String) = Action { implicit request =>
+    def authenticate(provider: String) = Authenticated { implicit request =>
         val callback_uri = routes.OAuth2Controller.callback(provider).absoluteURL()
 
-        TemporaryRedirect(
-            provider match {
-                case "facebook" => Service.facebook.getAuthURI(callback_uri, List("read_mailbox"))
-                case "beeminder" => Service.beeminder.getAuthURI(callback_uri)
-                case _ => throw new IllegalArgumentException
-            }
-        )
+        provider match {
+            case "beeminder" =>
+                if (!request.user.isReal) {
+                    TemporaryRedirect(Service.beeminder.getAuthURI(callback_uri))
+                } else {
+                    Ok
+                }
+
+            case "facebook" =>
+                if (request.user.isReal) {
+                    if (!request.user.fb_service.isDefined) {
+                        TemporaryRedirect(Service.facebook.getAuthURI(callback_uri, List("read_mailbox")))
+                    } else {
+                        Ok
+                    }
+                } else {
+                    Forbidden
+                }
+
+            case _ => NotFound
+        }
     }
 
-    def callback(provider: String) = Action { implicit request =>
+    def callback(provider: String) = Authenticated { implicit request =>
         provider match {
             case "facebook" => {
                 val callback_uri = "http://" + request.host + "/auth/" + provider + "/callback"
@@ -29,8 +43,11 @@ object OAuth2Controller extends Controller {
                 request.getQueryString("code") match {
                     case Some(code) => {
                         val token = Service.facebook.exchangeCodeForToken(code, callback_uri).get
-                        Logger.info(token.token)
-                        Logger.info(token.expiry.toString)
+                        val fb = new Service(None, "facebook", token.token, Some(token.expiry))
+                        fb.insert()
+
+                        request.user.fb_service = Some(fb)
+                        request.user.save()
                     }
 
                     case None => {

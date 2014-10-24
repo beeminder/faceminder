@@ -14,6 +14,7 @@ case class User(
     def insert() = {
         // Ensure this Event hasn't already been put into the database
         id match {
+            case Some(-1) => throw new InstantiationException
             case Some(_) => throw new CloneNotSupportedException
             case None => // do nothing
         }
@@ -25,6 +26,7 @@ case class User(
 
     def save() = {
         id match {
+            case Some(-1) => throw new InstantiationException
             case Some(_) => // do nothing
             case None => throw new NullPointerException
         }
@@ -33,6 +35,8 @@ case class User(
             Table.filter(_.id === id.get).update(this)
         }
     }
+
+    def isReal = id != Some(-1)
 }
 
 object User {
@@ -53,6 +57,13 @@ object User {
         u => u.id.get,
         i => User.getById(i).get
     )
+
+    val Guest = new User(
+        Some(-1),
+        "Guest",
+        Seq(),
+        new Service(None, "beeminder", "", None),
+        None)
 }
 
 class UserModel(tag: Tag) extends Table[User](tag, "User") {

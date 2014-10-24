@@ -8,8 +8,8 @@ import play.api.mvc.Security._
 import models._
 
 object Authenticated extends AuthenticatedBuilder({ request =>
-    request.session.get("user_id").flatMap { id =>
+    Some(request.session.get("user_id").flatMap { id =>
         User.getById(id.toInt)
-    }
+    }.getOrElse(User.Guest))
 })
 
