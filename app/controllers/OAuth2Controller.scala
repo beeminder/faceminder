@@ -2,6 +2,7 @@ package controllers
 
 import play.api._
 import play.api.mvc._
+import play.api.libs.json._
 
 import oauth2._
 
@@ -9,7 +10,7 @@ import models._
 
 object OAuth2Controller extends Controller {
     def authenticate(provider: String) = Action { implicit request =>
-        val callback_uri = "http://" + request.host + "/auth/" + provider + "/callback"
+        val callback_uri = routes.OAuth2Controller.callback(provider).absoluteURL()
 
         TemporaryRedirect(
             provider match {
@@ -42,10 +43,25 @@ object OAuth2Controller extends Controller {
 
             case "beeminder" => {
                 val token = request.getQueryString("access_token").get
-                val username = Service.beeminder.getResource("/me.json", token)
-                // TODO(sandy): this is where we left off -- doing proper user auth
-                Logger.info(username.get)
-                Ok.withSession(session + ("user_id" -> "1"))
+                val payload = Service.beeminder.getResource("/me.json", token).get
+                val username = (payload \ "username").as[String]
+
+                val user = User.getByUsername(username) match {
+                    case Some(u) => u
+                    case None => {
+                        val bee = new Service(None, "beeminder", token, None)
+                        bee.insert()
+
+                        val u = new User(None, username, Seq(), bee, None)
+                        u.insert()
+
+                        u
+                    }
+                }
+
+                Ok.withSession(session +
+                    ("user_id" -> user.id.get.toString)
+                )
             }
         }
     }

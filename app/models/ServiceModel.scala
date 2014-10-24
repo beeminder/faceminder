@@ -8,10 +8,9 @@ import com.typesafe.config.ConfigFactory
 
 case class Service(
         var id: Option[Int] = None,
-        owner: User,
         provider: String,
         var token: String,
-        var expiry: DateTime) {
+        var expiry: Option[DateTime]) {
 
     // make sure we have a valid provider
     // TODO(sandy): this should be smarter than it is.
@@ -50,7 +49,7 @@ case class Service(
            // TODO(sandy): make this invalidate the token if it fails
             val authToken = Service.facebook.refreshToken(token).get
             token = authToken.token
-            expiry = authToken.expiry
+            expiry = Some(authToken.expiry)
             save()
         }
     }
@@ -76,16 +75,9 @@ object Service {
         }
     }
 
-    implicit def implicitServiceColumnMapper = MappedColumnType.base[Option[Service], Int](
-        os => os match {
-            case Some(s) => s.id.get
-            case None => -1
-        },
-
-        i => i match {
-            case -1 => None
-            case id => Some(Service.getById(id).get)
-        }
+    implicit def implicitServiceColumnMapper = MappedColumnType.base[Service, Int](
+        s => s.id.get,
+        i => Service.getById(i).get
     )
 }
 
@@ -94,15 +86,13 @@ class ServiceModel(tag: Tag) extends Table[Service](tag, "Service") {
     import utils.DateConversions._
 
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-    def owner = column[User]("owner")
     def provider = column[String]("provider")
     def token = column[String]("token")
-    def expiry = column[DateTime]("expiry")
+    def expiry = column[Option[DateTime]]("expiry")
 
     def service = Service.apply _
     def * = (
         id.?,
-        owner,
         provider,
         token,
         expiry

@@ -21,123 +21,123 @@ case class AuthToken(token: String, expiry: DateTime)
  */
 class OAuth2
 {
-	/** OAuth2 Refresh Token to exchange for Access Token */
-	var refreshToken: String = ""
+    /** OAuth2 Refresh Token to exchange for Access Token */
+    var refreshToken: String = ""
 
-	/** OAuth2 Access Token use to access API */
-	var accessToken: String = ""
+    /** OAuth2 Access Token use to access API */
+    var accessToken: String = ""
 
-	/** HTTP Response from server after sending a request */
-	var response: String = ""
+    /** HTTP Response from server after sending a request */
+    var response: String = ""
 
-	/** HTTP dispatch.request object */
-	var request: dispatch.Req = _
+    /** HTTP dispatch.request object */
+    var request: dispatch.Req = _
 
-	/** Dispatch object doing the actually HTTP request execution */
-	val browser = new Http
+    /** Dispatch object doing the actually HTTP request execution */
+    val browser = new Http
 
-	/** Store the last error from execution.  Use for debugging */
-	var error: String = ""
+    /** Store the last error from execution.  Use for debugging */
+    var error: String = ""
 
-	/**
-	 * Use this function to generate the URL for an OAuth2 Authorization server where user grant request to our app
-	 * @param providerURI URI for the server to send request to
-	 * @param params Querystring parameters to generate the request URI
-	 * @return URL of Authorization Server with parameter for the application
-	 */
-	def getOAuth2AuthorizationURI (
-		providerURI: String,
-		params: Map[String, String] = Map()
-	) : String =
-	{
-		request = url(providerURI).GET
-		(request <<? params).url
-	}
+    /**
+     * Use this function to generate the URL for an OAuth2 Authorization server where user grant request to our app
+     * @param providerURI URI for the server to send request to
+     * @param params Querystring parameters to generate the request URI
+     * @return URL of Authorization Server with parameter for the application
+     */
+    def getOAuth2AuthorizationURI (
+        providerURI: String,
+        params: Map[String, String] = Map()
+    ) : String =
+    {
+        request = url(providerURI).GET
+        (request <<? params).url
+    }
 
     def getOAuth2Request (
-		providerTokenURI: String,
-		params: Map[String, String] = Map()
-	) : Option[String] =
-	{
-		response = ""
-		request = url(providerTokenURI).GET <<? params
-		try
-		{
-			response = Await.result(browser(request OK as.String), 10 seconds)
-			return Some(response)
-		}
-		catch
-		{
-			case e: ExecutionException => this.error = "HTTP Error: " + e.getMessage
-			case e: Exception => this.error = "General Exception: " + e.getMessage
-		}
+        providerTokenURI: String,
+        params: Map[String, String] = Map()
+    ) : Option[String] =
+    {
+        response = ""
+        request = url(providerTokenURI).GET <<? params
+        try
+        {
+            response = Await.result(browser(request OK as.String), 10 seconds)
+            return Some(response)
+        }
+        catch
+        {
+            case e: ExecutionException => this.error = "HTTP Error: " + e.getMessage
+            case e: Exception => this.error = "General Exception: " + e.getMessage
+        }
 
-		None
-	}
+        None
+    }
 
 
-	/**
-	 * Request a piece of information from the authorization server via POST.  Usually used to get an access token.
-	 * @param providerTokenURI URI where to send request
-	 * @param params POST parameters to send along with the request
-	 * @return Server response or None
-	 */
-	def postOAuth2Request (
-		providerTokenURI: String,
-		params: Map[String, String] = Map()
-	) : Option[String] =
-	{
-		response = ""
-		request = url(providerTokenURI).POST
-		request << params
-		try
-		{
-			response = Await.result(browser(request OK as.String), 0 nanos)
-			return Some(response)
-		}
-		catch
-		{
-			case e: ExecutionException => this.error = "HTTP Error: " + e.getMessage
-			case e: Exception => this.error = "General Exception: " + e.getMessage
-		}
+    /**
+     * Request a piece of information from the authorization server via POST.  Usually used to get an access token.
+     * @param providerTokenURI URI where to send request
+     * @param params POST parameters to send along with the request
+     * @return Server response or None
+     */
+    def postOAuth2Request (
+        providerTokenURI: String,
+        params: Map[String, String] = Map()
+    ) : Option[String] =
+    {
+        response = ""
+        request = url(providerTokenURI).POST
+        request << params
+        try
+        {
+            response = Await.result(browser(request OK as.String), 0 nanos)
+            return Some(response)
+        }
+        catch
+        {
+            case e: ExecutionException => this.error = "HTTP Error: " + e.getMessage
+            case e: Exception => this.error = "General Exception: " + e.getMessage
+        }
 
-		None
-	}
+        None
+    }
 
-	/**
-	 * Get an OAuth2 API Resource from the server after we have an Access Token
-	 * @param resourceURI URI of resource being request
-	 * @param params Extra parameters to send to the server
-	 * @param headers Extra headers to send to the server
-	 * @return server response string or None
-	 */
-	def getOAuth2Resource (
-		resourceURI: String,
-		params: Map[String, String] = Map(),
-		headers: Map[String, String] = Map()
-	) : Option[String] =
-	{
-		request = url(resourceURI).GET
-		request.addQueryParameter("access_token", accessToken)
-		response = ""
-		request <<? params
-		for ( header <- headers )
-		{
-			request.addHeader(header._1, header._2)
-		}
+    /**
+     * Get an OAuth2 API Resource from the server after we have an Access Token
+     * @param resourceURI URI of resource being request
+     * @param params Extra parameters to send to the server
+     * @param headers Extra headers to send to the server
+     * @return server response string or None
+     */
+    def getOAuth2Resource (
+        resourceURI: String,
+        params: Map[String, String] = Map(),
+        headers: Map[String, String] = Map()
+    ) : Option[String] =
+    {
+        request = url(resourceURI).GET
+        request.addQueryParameter("access_token", accessToken)
+        response = ""
+        request <<? params
+        for ( header <- headers )
+        {
+            request.addHeader(header._1, header._2)
+        }
 
-		try
-		{
-			response = Await.result(browser(request OK as.String), 0 nanos)
-			return Some(response)
-		}
-		catch
-		{
-			case ex: ExecutionException => this.error = "HTTP Error: " + ex.getMessage
-			case e: Exception => this.error = "Generic Error " + e.getMessage
-		}
+        try
+        {
+            response = Await.result(browser(request OK as.String), 0 nanos)
+            return Some(response)
+        }
+        catch
+        {
+            case ex: ExecutionException => this.error = "HTTP Error: " + ex.getMessage
+            case e: Exception => this.error = "Generic Error " + e.getMessage
+        }
 
-		None
-	}
-
+        None
+    }
 }
+

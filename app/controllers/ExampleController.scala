@@ -35,9 +35,6 @@ object ExampleController extends Controller {
     def index = Action {
         // Updates form with ExampleModel's (singleton object) current value
 
-        var user = new User(None, "santino", "", "", Seq(), None, None)
-        user.insert()
-
         Ok(views.html.example(name = dad.name))
 
         // If id had been passed through
