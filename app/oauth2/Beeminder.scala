@@ -51,5 +51,31 @@ case class Beeminder (
 
         None
     }
+
+    def post(
+            endpoint: String,
+            token: String,
+            params: Map[String, String] = Map()): Option[JsValue] = {
+        request = url("https://www.beeminder.com/api/v1" + endpoint).POST <<?
+            (params + ("access_token" -> token))
+        response = ""
+
+        Logger.info(request.url)
+
+        try
+        {
+            response = Await.result(browser(request OK as.String), 10 seconds)
+            return Some(Json.parse(response))
+        }
+        catch
+        {
+            case ex: ExecutionException => this.error = "HTTP Error: " + ex.getMessage
+            case e: Exception => this.error = "Generic Error " + e.getMessage
+        }
+
+        Logger.info(this.error)
+
+        None
+    }
 }
 

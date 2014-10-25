@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
+import org.scala_tools.time.Imports._
 
 import oauth2._
 import actions._
@@ -53,7 +54,44 @@ object GoalController extends Controller {
     }
 
     def create = Authenticated { implicit request =>
-        Ok
+        case class GoalForm(
+            moduleId: String,
+            slug: String,
+            title: String,
+            perWeek: Int
+        )
+
+        val goalForm = Form(mapping(
+            "moduleId" -> text,
+            "slug" -> text,
+            "title" -> text,
+            "perWeek" -> number
+        )(GoalForm.apply)(GoalForm.unapply)).bindFromRequest.get
+
+        val module = Module.getById(goalForm.moduleId)
+
+        val user = request.user
+        val result = Service.beeminder.post(
+            "/users/" + user.username + "/goals.json",
+            user.bee_service.token,
+            Map(
+                "slug" -> goalForm.slug,
+                "title" -> goalForm.title,
+                "goal_type" -> module.manifest.goalType.toString,
+                "goaldate" -> ((DateTime.now + 52.weeks).getMillis / 1000).toString,
+                "goalval" -> (52 * goalForm.perWeek).toString,
+                "autodata" -> ("Faceminder: " + module.manifest.name),
+                "dryrun" -> "true"
+            ))
+
+        if (result.isDefined) {
+            val goal = new Goal(None, module, user, goalForm.slug, goalForm.title)
+            goal.insert()
+            Ok("cool!")
+        } else {
+            // TODO(sandy): do something smart here
+            InternalServerError
+        }
     }
 }
 

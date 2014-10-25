@@ -37,7 +37,7 @@ case class ModuleManifest(
         name: String,
         description: String,
         permissions: Seq[String],
-        goal_type: GoalType.GoalType)
+        goalType: GoalType.GoalType)
 
 trait Module {
     def manifest: ModuleManifest

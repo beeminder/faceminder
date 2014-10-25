@@ -9,7 +9,9 @@ import modules._
 case class Goal(
         var id: Option[Int] = None,
         module: Module,
-        owner: User) {
+        owner: User,
+        slug: String,
+        title: String) {
     private val Table = TableQuery[GoalModel]
     def insert() = {
         // Ensure this Event hasn't already been put into the database
@@ -21,6 +23,9 @@ case class Goal(
         DB.withSession { implicit session =>
             id = Some((Table returning Table.map(_.id)) += this)
         }
+
+        owner.goals = owner.goals :+ this
+        owner.save()
     }
 
     def save() = {
@@ -32,9 +37,6 @@ case class Goal(
         DB.withSession { implicit session =>
             Table.filter(_.id === id.get).update(this)
         }
-    }
-
-    def create() = {
     }
 
     def update() = {
@@ -68,8 +70,10 @@ class GoalModel(tag: Tag) extends Table[Goal](tag, "Goal") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def module = column[Module]("module")
     def owner = column[User]("owner")
+    def slug = column[String]("slug")
+    def title = column[String]("title")
 
     val goal = Goal.apply _
-    def * = (id.?, module, owner) <> (goal.tupled, Goal.unapply _)
+    def * = (id.?, module, owner, slug, title) <> (goal.tupled, Goal.unapply _)
 }
 
