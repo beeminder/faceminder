@@ -1,0 +1,11 @@
+@()
+
+<html>
+<body>
+<form method="POST" action="@routes.GoalController.create">
+<input type="hidden" name="moduleId" value="chat" />
+Slug: <input type="text" name="slug" />
+<input type="submit" />
+</form>
+</body>
+</html>

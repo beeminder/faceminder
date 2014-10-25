@@ -11,6 +11,11 @@ GET     /auth/:provider             controllers.OAuth2Controller.authenticate(pr
 GET     /auth/:provider/callback    controllers.OAuth2Controller.callback(provider)
 GET     /auth/facebook/obtain       controllers.OAuth2Controller.obtainPermission
 
+POST    /goal/obtain                controllers.GoalController.obtain
+# okay this is pretty icky but maybe(?) necessary for permission granting?
+GET     /goal/setup/:moduleId       controllers.GoalController.setup(moduleId)
+GET     /goal/create                controllers.GoalController.create
+
 #DEBUG
 GET     /debug/grant/:permission   controllers.DebugController.grantPermission(permission)
 

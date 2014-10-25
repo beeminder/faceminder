@@ -42,7 +42,7 @@ object OAuth2Controller extends Controller {
         request.session.get("obtain_permissions") match {
             case Some(permStr) => {
                 if (request.user.isReal) {
-                    val permissions = permStr.split(";") ++ request.user.permissions
+                    val permissions = permStr.split(",") ++ request.user.permissions
                     Logger.info("requesting " + permissions.mkString(","))
                     TemporaryRedirect(
                         Service.facebook.getAuthURI(callback_uri, permissions)
@@ -57,6 +57,7 @@ object OAuth2Controller extends Controller {
     }
 
     def callback(provider: String) = Authenticated { implicit request =>
+        // TODO(sandy): this is super ugly, clean it up
         provider match {
             case "facebook" => {
                 val callback_uri = "http://" + request.host + "/auth/" + provider + "/callback"
@@ -87,7 +88,10 @@ object OAuth2Controller extends Controller {
                     }
                 }
 
-                Ok
+                session.get("redirect_to") match {
+                    case Some(url) => Redirect(url).withSession(session - "redirect_to")
+                    case None => Ok
+                }
             }
 
             case "beeminder" => {

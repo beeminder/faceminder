@@ -1,0 +1,14 @@
+@(mods: Seq[modules.Module])
+
+<html>
+<body>
+<form method="POST" action="@routes.GoalController.obtain">
+Available modules: <select name="moduleId">
+@for(module <- mods) {
+    <option value="@module.manifest.id">@module.manifest.name</item>
+}
+</select><br />
+<input type="submit" />
+</form>
+</body>
+</html>

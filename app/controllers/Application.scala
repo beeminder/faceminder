@@ -5,10 +5,12 @@ import play.api.mvc._
 
 import actions._
 
+import modules._
+
 object Application extends Controller {
 
   def index = Authenticated {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(views.html.newgoal(Module.Available))
   }
 
 }

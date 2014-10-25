@@ -9,7 +9,10 @@ object ChatModule extends Module {
         "chat",
         "Stay in touch",
         "Initiate chats with Facebook friends",
-        Seq("read_mailbox")
+        Seq("read_mailbox"),
+        GoalType.DoMore
     )
+
+    def renderNew = views.html.newChatGoal()
 }
 
