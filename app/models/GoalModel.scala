@@ -4,8 +4,11 @@ import play.api.Play.current
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 
+import modules._
+
 case class Goal(
         var id: Option[Int] = None,
+        module: Module,
         owner: User) {
     private val Table = TableQuery[GoalModel]
     def insert() = {
@@ -31,8 +34,10 @@ case class Goal(
         }
     }
 
-    def update() = {
+    def create() = {
+    }
 
+    def update() = {
     }
 }
 
@@ -61,9 +66,10 @@ object Goal {
 
 class GoalModel(tag: Tag) extends Table[Goal](tag, "Goal") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def module = column[Module]("module")
     def owner = column[User]("owner")
 
     val goal = Goal.apply _
-    def * = (id.?, owner) <> (goal.tupled, Goal.unapply _)
+    def * = (id.?, module, owner) <> (goal.tupled, Goal.unapply _)
 }
 

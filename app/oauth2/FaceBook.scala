@@ -18,7 +18,7 @@ case class FaceBook (
 {
 	def getAuthURI (
 		redirectURI: String,
-		scope: List[String],
+		scope: Seq[String],
 		state: String = MessageDigest.getInstance("SHA1").digest("bob".getBytes).map(_ & 0xFF).map(_.toHexString).mkString
 	) : String =
 	{

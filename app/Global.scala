@@ -11,6 +11,7 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
 
 import actors._
+import modules._
 
 object Global extends GlobalSettings {
     val conf = ConfigFactory.load

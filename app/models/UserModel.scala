@@ -36,7 +36,13 @@ case class User(
         }
     }
 
-    def isReal = id != Some(-1)
+    def permissions: Set[String] = {
+        goals.flatMap { goal =>
+            goal.module.manifest.permissions
+        }.toSet
+    }
+
+    val isReal = id != Some(-1)
 }
 
 object User {

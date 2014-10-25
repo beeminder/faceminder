@@ -23,7 +23,7 @@ object OAuth2Controller extends Controller {
             case "facebook" =>
                 if (request.user.isReal) {
                     if (!request.user.fb_service.isDefined) {
-                        TemporaryRedirect(Service.facebook.getAuthURI(callback_uri, List("read_mailbox")))
+                        TemporaryRedirect(Service.facebook.getAuthURI(callback_uri, List()))
                     } else {
                         Ok
                     }
@@ -35,6 +35,27 @@ object OAuth2Controller extends Controller {
         }
     }
 
+    // Grant additional permissions to a facebook token
+    def obtainPermission = Authenticated { implicit request =>
+        val callback_uri = routes.OAuth2Controller.callback("facebook").absoluteURL()
+
+        request.session.get("obtain_permissions") match {
+            case Some(permStr) => {
+                if (request.user.isReal) {
+                    val permissions = permStr.split(";") ++ request.user.permissions
+                    Logger.info("requesting " + permissions.mkString(","))
+                    TemporaryRedirect(
+                        Service.facebook.getAuthURI(callback_uri, permissions)
+                    ).withSession(session - "obtain_permissions")
+                } else {
+                    Forbidden
+                }
+            }
+
+            case None => Ok
+        }
+    }
+
     def callback(provider: String) = Authenticated { implicit request =>
         provider match {
             case "facebook" => {
@@ -43,11 +64,22 @@ object OAuth2Controller extends Controller {
                 request.getQueryString("code") match {
                     case Some(code) => {
                         val token = Service.facebook.exchangeCodeForToken(code, callback_uri).get
-                        val fb = new Service(None, "facebook", token.token, Some(token.expiry))
-                        fb.insert()
 
-                        request.user.fb_service = Some(fb)
-                        request.user.save()
+                        if (request.user.fb_service.isDefined) {
+                            // Update the old service
+                            val fb = request.user.fb_service.get
+                            fb.token = token.token
+                            fb.expiry = Some(token.expiry)
+                            fb.save()
+                        } else {
+                            // Create a new one, because it doesn't exist yet
+                            val fb = new Service(None, "facebook", token.token, Some(token.expiry))
+                            fb.insert()
+                            request.user.fb_service = Some(fb)
+                            request.user.save()
+                        }
+
+                        // TODO(sandy): should be able to redirect here back to goal creation
                     }
 
                     case None => {
