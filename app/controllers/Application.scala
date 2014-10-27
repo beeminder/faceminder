@@ -8,9 +8,8 @@ import actions._
 import modules._
 
 object Application extends Controller {
-
-  def index = Authenticated {
-    Ok(views.html.newgoal(Module.Available))
-  }
-
+    def index = Authenticated {
+        Ok(views.html.moduleSelection(Module.Available))
+    }
 }
+

@@ -1,4 +1,4 @@
-@()
+@(options: Option[play.api.templates.Html])
 
 <html>
 <body>
@@ -8,6 +8,12 @@
     Slug: <input type="text" name="slug" /> <br />
     Title: <input type="text" name="title" /> <br />
     Per week: <input type="number" name="perWeek" /> <br />
+    <div class="options">
+        @options match {
+            case Some(opts) => { @opts }
+            case None => { }
+        }
+    </div>
     <input type="submit" />
 </form>
 </body>

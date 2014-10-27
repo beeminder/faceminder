@@ -2,6 +2,7 @@ package modules
 
 import play.api.Logger
 import play.api.Play.current
+import play.api.mvc._
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 
@@ -14,11 +15,11 @@ object Module {
         module.manifest.id -> module
     }.toMap
 
-    def getById(id: String) = lookup(id)
+    def getById(id: String) = lookup.get(id)
 
     implicit def implicitModuleColumnMapper = MappedColumnType.base[Module, String](
         m => m.manifest.id,
-        s => Module.getById(s)
+        s => Module.getById(s).get
     )
 }
 
@@ -42,10 +43,11 @@ case class ModuleManifest(
 trait Module {
     def manifest: ModuleManifest
 
-    // TODO(sandy): it probably doesn't make sense for the module
-    // to have SUPREME ULTIMATE POWER over setup rendering. maybe
-    // it just gets an extra panel or something?
-    // also: this is a shit name for a method
-    def renderNew: play.api.templates.Html
+    // HTML for additional options to display on the goal creation page
+    def renderOptions: Option[play.api.templates.Html]
+
+    // Custom handler for the additional options.
+    // Returns: a map of parameters to override in goal creation
+    def handleRequest(queryString: Map[String, String]): Map[String, String]
 }
 

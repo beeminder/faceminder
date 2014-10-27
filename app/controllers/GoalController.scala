@@ -22,7 +22,7 @@ object GoalController extends Controller {
             "moduleId" -> text
         )(GoalForm.apply)(GoalForm.unapply)).bindFromRequest.get
 
-        val module = Module.getById(goalForm.moduleId)
+        val module = Module.getById(goalForm.moduleId).get
 
         val user = request.user
         if (user.isReal) {
@@ -40,14 +40,18 @@ object GoalController extends Controller {
                 Redirect(nextPage)
             }
         } else {
-            Forbidden
+            // TODO(sandy): this isn't right, we need to redirect back to the proper place
+            // it would be nice to have a redirect framework handler thing
+            Redirect(routes.OAuth2Controller.authenticate("beeminder").absoluteURL())
         }
     }
 
     def setup(moduleId: String) = Authenticated { implicit request =>
         if (request.user.isReal) {
-            // TODO(sandy): this lookup can fail
-            Ok(Module.getById(moduleId).renderNew)
+            Module.getById(moduleId) match {
+                case Some(module) => Ok(views.html.newGoal(module.renderOptions))
+                case None => BadRequest
+            }
         } else {
             Forbidden
         }
@@ -68,21 +72,28 @@ object GoalController extends Controller {
             "perWeek" -> number
         )(GoalForm.apply)(GoalForm.unapply)).bindFromRequest.get
 
-        val module = Module.getById(goalForm.moduleId)
+        val module = Module.getById(goalForm.moduleId).get
+
+        val defaultParams = Map(
+            "slug" -> goalForm.slug,
+            "title" -> goalForm.title,
+            "goal_type" -> module.manifest.goalType.toString,
+            "goaldate" -> ((DateTime.now + 52.weeks).getMillis / 1000).toString,
+            "goalval" -> (52 * goalForm.perWeek).toString,
+            "autodata" -> ("Faceminder: " + module.manifest.name),
+            "dryrun" -> "true"
+        )
+
+        val postData = request.body.asFormUrlEncoded.get.map { case (k, v) =>
+            k -> v.mkString(",")
+        }
 
         val user = request.user
         val result = Service.beeminder.post(
             "/users/" + user.username + "/goals.json",
             user.bee_service.token,
-            Map(
-                "slug" -> goalForm.slug,
-                "title" -> goalForm.title,
-                "goal_type" -> module.manifest.goalType.toString,
-                "goaldate" -> ((DateTime.now + 52.weeks).getMillis / 1000).toString,
-                "goalval" -> (52 * goalForm.perWeek).toString,
-                "autodata" -> ("Faceminder: " + module.manifest.name),
-                "dryrun" -> "true"
-            ))
+            defaultParams ++ module.handleRequest(postData)
+        )
 
         if (result.isDefined) {
             Goal.create(module, user, goalForm.slug, goalForm.title)
