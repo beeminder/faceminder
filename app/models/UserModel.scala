@@ -7,37 +7,21 @@ import play.api.db.slick.Config.driver.simple._
 import utils.Flyweight
 
 case class User(
-        id: Option[Int] = None,
+        id: Int,
         username: String,
         var goals: Seq[Goal],
         var bee_service: Service,
         var fb_service: Option[Service]) {
     private val Table = TableQuery[UserModel]
 
-    private var hasBeenInserted = false
-    def insert() = {
-        // Ensure this Event hasn't already been put into the database
-        if (id.isDefined || hasBeenInserted || id == Some(-1)) {
-            throw new CloneNotSupportedException
-        }
-        hasBeenInserted = true
-
-        val newId = DB.withSession { implicit session =>
-            (Table returning Table.map(_.id)) += this
-        }
-
-        User.getById(newId).get
-    }
-
     def save() = {
         id match {
-            case Some(-1) => throw new InstantiationException
-            case Some(_) => // do nothing
-            case None => throw new NullPointerException
+            case -1 => throw new InstantiationException
+            case _ => // do nothing
         }
 
         DB.withSession { implicit session =>
-            Table.filter(_.id === id.get).update(this)
+            Table.filter(_.id === id).update(this)
         }
     }
 
@@ -47,12 +31,21 @@ case class User(
         }.toSet
     }
 
-    val isReal = id != Some(-1)
+    val isReal = id != -1
 }
 
 object User extends Flyweight {
     type T = User
     type Key = Int
+
+    def create(_1: String, _2: Seq[Goal], _3: Service, _4: Option[Service]) = {
+        getById(
+            DB.withSession { implicit session =>
+                (Table returning Table.map(_.id)) +=
+                    new User(0, _1, _2, _3, _4)
+            }
+        ).get
+    }
 
     private val Table = TableQuery[UserModel]
     def rawGet(id: Int): Option[User] = {
@@ -65,20 +58,20 @@ object User extends Flyweight {
         DB.withSession { implicit session =>
             Table.filter(_.username === username).firstOption
         }.flatMap { user =>
-            User.getById(user.id.get)
+            User.getById(user.id)
         }
     }
 
     implicit def implicitUserColumnMapper = MappedColumnType.base[User, Int](
-        u => u.id.get,
+        u => u.id,
         i => User.getById(i).get
     )
 
     val Guest = new User(
-        Some(-1),
+        -1,
         "Guest",
         Seq(),
-        new Service(None, "beeminder", "", None),
+        new Service(0, "beeminder", "", None),
         None)
 }
 
@@ -90,6 +83,6 @@ class UserModel(tag: Tag) extends Table[User](tag, "User") {
     def fb_service = column[Option[Service]]("fb_service")
 
     val user = User.apply _
-    def * = (id.?, username, goals, bee_service, fb_service) <> (user.tupled, User.unapply _)
+    def * = (id, username, goals, bee_service, fb_service) <> (user.tupled, User.unapply _)
 }
 

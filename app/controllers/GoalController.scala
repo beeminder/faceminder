@@ -85,7 +85,7 @@ object GoalController extends Controller {
             ))
 
         if (result.isDefined) {
-            val goal = new Goal(None, module, user.id.get, goalForm.slug, goalForm.title).insert()
+            Goal.create(module, user, goalForm.slug, goalForm.title)
             Ok("cool!")
         } else {
             // TODO(sandy): do something smart here

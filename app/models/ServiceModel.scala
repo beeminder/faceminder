@@ -8,8 +8,9 @@ import com.typesafe.config.ConfigFactory
 
 import utils.Flyweight
 
+// You should never call this constructor by hand; instead call Service.create
 case class Service(
-        id: Option[Int] = None,
+        id: Int,
         provider: String,
         var token: String,
         var expiry: Option[DateTime]) {
@@ -22,32 +23,9 @@ case class Service(
         case _ => throw new IllegalArgumentException
     }
 
-    private val Table = TableQuery[ServiceModel]
-
-    private var hasBeenInserted = false
-    def insert(): Service = {
-        // FIXME(sandy): it would be nice if this was a method on Service
-        // instead, to ensure we never have half-created objects lying around
-        if (id.isDefined || hasBeenInserted) {
-            throw new CloneNotSupportedException
-        }
-        hasBeenInserted = true
-
-        val newId = DB.withSession { implicit session =>
-            (Table returning Table.map(_.id)) += this
-        }
-
-        Service.getById(newId).get
-    }
-
     def save() = {
-        id match {
-            case Some(_) => // do nothing
-            case None => throw new NullPointerException
-        }
-
         DB.withSession { implicit session =>
-            Table.filter(_.id === id.get).update(this)
+            TableQuery[ServiceModel].filter(_.id === id).update(this)
         }
     }
 
@@ -63,7 +41,7 @@ case class Service(
 
     def reload() = {
         // TODO(sandy): this can fail if the object is deleted
-        val reloaded = Service.rawGet(id.get).get
+        val reloaded = Service.rawGet(id).get
         token = reloaded.token
         expiry = reloaded.expiry
     }
@@ -72,9 +50,19 @@ case class Service(
 object Service extends Flyweight {
     type T = Service
     type Key = Int
+    private val Table = TableQuery[ServiceModel]
 
-    val conf = ConfigFactory.load
+    def create(_1: String, _2: String, _3: Option[DateTime]) = {
+        getById(
+            DB.withSession { implicit session =>
+                (Table returning Table.map(_.id)) +=
+                    new Service(0, _1, _2, _3)
+            }
+        ).get
+    }
 
+    // TODO(sandy): these don't really belong here
+    private val conf = ConfigFactory.load
     val facebook = new oauth2.FaceBook(
         conf.getString("facebook.appID"),
         conf.getString("facebook.secret")
@@ -85,12 +73,13 @@ object Service extends Flyweight {
         conf.getString("beeminder.secret")
     )
 
-    private val Table = TableQuery[ServiceModel]
+
     def rawGet(id: Int): Option[Service] = {
         DB.withSession { implicit session =>
             Table.filter(_.id === id).firstOption
         }
     }
+
 
     object unmanaged {
         def getByProvider(provider: String): Seq[Service] = {
@@ -100,8 +89,9 @@ object Service extends Flyweight {
         }
     }
 
+
     implicit def implicitServiceColumnMapper = MappedColumnType.base[Service, Int](
-        s => s.id.get,
+        s => s.id,
         i => Service.getById(i).get
     )
 }
@@ -117,7 +107,7 @@ class ServiceModel(tag: Tag) extends Table[Service](tag, "Service") {
 
     def service = Service.apply _
     def * = (
-        id.?,
+        id,
         provider,
         token,
         expiry
