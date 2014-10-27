@@ -29,16 +29,18 @@ class CronActor extends Actor {
         val nextRefresh = DateTime.now + duration
 
         Logger.info("refreshing services")
-        Service.getByProvider("facebook").map { provider =>
+        Service.unmanaged.getByProvider("facebook").map { provider =>
             if (nextRefresh > provider.expiry.get) {
                 provider.refresh()
             }
         }
+
+        Service.inMemory.map(_.reload())
     }
 
     def updateGoals = {
         Logger.info("updating goals")
-        Goal.getAll().map(_.update())
+        Goal.unmanaged.getAll().map(_.update())
     }
 }
 

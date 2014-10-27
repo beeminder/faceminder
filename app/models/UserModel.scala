@@ -4,24 +4,29 @@ import play.api.Play.current
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 
+import utils.Flyweight
+
 case class User(
-        var id: Option[Int] = None,
+        id: Option[Int] = None,
         username: String,
         var goals: Seq[Goal],
         var bee_service: Service,
         var fb_service: Option[Service]) {
     private val Table = TableQuery[UserModel]
+
+    private var hasBeenInserted = false
     def insert() = {
         // Ensure this Event hasn't already been put into the database
-        id match {
-            case Some(-1) => throw new InstantiationException
-            case Some(_) => throw new CloneNotSupportedException
-            case None => // do nothing
+        if (id.isDefined || hasBeenInserted || id == Some(-1)) {
+            throw new CloneNotSupportedException
+        }
+        hasBeenInserted = true
+
+        val newId = DB.withSession { implicit session =>
+            (Table returning Table.map(_.id)) += this
         }
 
-        DB.withSession { implicit session =>
-            id = Some((Table returning Table.map(_.id)) += this)
-        }
+        User.getById(newId).get
     }
 
     def save() = {
@@ -45,9 +50,12 @@ case class User(
     val isReal = id != Some(-1)
 }
 
-object User {
+object User extends Flyweight {
+    type T = User
+    type Key = Int
+
     private val Table = TableQuery[UserModel]
-    def getById(id: Int): Option[User] = {
+    def rawGet(id: Int): Option[User] = {
         DB.withSession { implicit session =>
             Table.filter(_.id === id).firstOption
         }
@@ -56,6 +64,8 @@ object User {
     def getByUsername(username: String): Option[User] = {
         DB.withSession { implicit session =>
             Table.filter(_.username === username).firstOption
+        }.flatMap { user =>
+            User.getById(user.id.get)
         }
     }
 

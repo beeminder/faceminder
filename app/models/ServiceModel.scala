@@ -6,8 +6,10 @@ import play.api.db.slick.Config.driver.simple._
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 
+import utils.Flyweight
+
 case class Service(
-        var id: Option[Int] = None,
+        id: Option[Int] = None,
         provider: String,
         var token: String,
         var expiry: Option[DateTime]) {
@@ -21,16 +23,21 @@ case class Service(
     }
 
     private val Table = TableQuery[ServiceModel]
-    def insert() = {
-        // Ensure this Event hasn't already been put into the database
-        id match {
-            case Some(_) => throw new CloneNotSupportedException
-            case None => // do nothing
+
+    private var hasBeenInserted = false
+    def insert(): Service = {
+        // FIXME(sandy): it would be nice if this was a method on Service
+        // instead, to ensure we never have half-created objects lying around
+        if (id.isDefined || hasBeenInserted) {
+            throw new CloneNotSupportedException
+        }
+        hasBeenInserted = true
+
+        val newId = DB.withSession { implicit session =>
+            (Table returning Table.map(_.id)) += this
         }
 
-        DB.withSession { implicit session =>
-            id = Some((Table returning Table.map(_.id)) += this)
-        }
+        Service.getById(newId).get
     }
 
     def save() = {
@@ -53,9 +60,19 @@ case class Service(
             save()
         }
     }
+
+    def reload() = {
+        // TODO(sandy): this can fail if the object is deleted
+        val reloaded = Service.rawGet(id.get).get
+        token = reloaded.token
+        expiry = reloaded.expiry
+    }
 }
 
-object Service {
+object Service extends Flyweight {
+    type T = Service
+    type Key = Int
+
     val conf = ConfigFactory.load
 
     val facebook = new oauth2.FaceBook(
@@ -69,15 +86,17 @@ object Service {
     )
 
     private val Table = TableQuery[ServiceModel]
-    def getById(id: Int): Option[Service] = {
+    def rawGet(id: Int): Option[Service] = {
         DB.withSession { implicit session =>
             Table.filter(_.id === id).firstOption
         }
     }
 
-    def getByProvider(provider: String): Seq[Service] = {
-        DB.withSession { implicit session =>
-            Table.filter(_.provider === provider).list
+    object unmanaged {
+        def getByProvider(provider: String): Seq[Service] = {
+            DB.withSession { implicit session =>
+                Table.filter(_.provider === provider).list
+            }
         }
     }
 

@@ -74,8 +74,7 @@ object OAuth2Controller extends Controller {
                             fb.save()
                         } else {
                             // Create a new one, because it doesn't exist yet
-                            val fb = new Service(None, "facebook", token.token, Some(token.expiry))
-                            fb.insert()
+                            val fb = new Service(None, "facebook", token.token, Some(token.expiry)).insert()
                             request.user.fb_service = Some(fb)
                             request.user.save()
                         }
@@ -102,13 +101,8 @@ object OAuth2Controller extends Controller {
                 val user = User.getByUsername(username) match {
                     case Some(u) => u
                     case None => {
-                        val bee = new Service(None, "beeminder", token, None)
-                        bee.insert()
-
-                        val u = new User(None, username, Seq(), bee, None)
-                        u.insert()
-
-                        u
+                        val bee = new Service(None, "beeminder", token, None).insert()
+                        new User(None, username, Seq(), bee, None).insert()
                     }
                 }
 

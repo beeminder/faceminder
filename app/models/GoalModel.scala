@@ -5,27 +5,32 @@ import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 
 import modules._
+import utils.Flyweight
 
 case class Goal(
         var id: Option[Int] = None,
         module: Module,
-        owner: User,
+        ownerId: Int,
         slug: String,
         title: String) {
     private val Table = TableQuery[GoalModel]
+
+    private var hasBeenInserted = false
     def insert() = {
-        // Ensure this Event hasn't already been put into the database
-        id match {
-            case Some(_) => throw new CloneNotSupportedException
-            case None => // do nothing
+        if (id.isDefined || hasBeenInserted) {
+            throw new CloneNotSupportedException
         }
 
-        DB.withSession { implicit session =>
-            id = Some((Table returning Table.map(_.id)) += this)
+        val newId = DB.withSession { implicit session =>
+            (Table returning Table.map(_.id)) += this
         }
 
-        owner.goals = owner.goals :+ this
+        val goal = Goal.getById(newId).get
+
+        owner.goals = owner.goals :+ goal
         owner.save()
+
+        goal
     }
 
     def save() = {
@@ -41,19 +46,27 @@ case class Goal(
 
     def update() = {
     }
+
+    lazy val owner = User.getById(ownerId).get
 }
 
-object Goal {
+object Goal extends Flyweight {
+    type T = Goal
+    type Key = Int
+
     private val Table = TableQuery[GoalModel]
-    def getById(id: Int): Option[Goal] = {
+
+    def rawGet(id: Int): Option[Goal] = {
         DB.withSession { implicit session =>
             Table.filter(_.id === id).firstOption
         }
     }
 
-    def getAll(): Seq[Goal] = {
-        DB.withSession { implicit session =>
-            Table.list
+    object unmanaged {
+        def getAll(): Seq[Goal] = {
+            DB.withSession { implicit session =>
+                Table.list
+            }
         }
     }
 
@@ -69,11 +82,11 @@ object Goal {
 class GoalModel(tag: Tag) extends Table[Goal](tag, "Goal") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def module = column[Module]("module")
-    def owner = column[User]("owner")
+    def ownerId = column[Int]("owner")
     def slug = column[String]("slug")
     def title = column[String]("title")
 
     val goal = Goal.apply _
-    def * = (id.?, module, owner, slug, title) <> (goal.tupled, Goal.unapply _)
+    def * = (id.?, module, ownerId, slug, title) <> (goal.tupled, Goal.unapply _)
 }
 
