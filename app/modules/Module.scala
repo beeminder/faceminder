@@ -6,6 +6,8 @@ import play.api.mvc._
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 
+import models._
+
 object Module {
     val Available = Seq(
         ChatModule
@@ -49,5 +51,8 @@ trait Module {
     // Custom handler for the additional options.
     // Returns: a map of parameters to override in goal creation
     def handleRequest(queryString: Map[String, String]): Map[String, String]
+
+    // The number of data points to return to beeminder
+    def update(goal: Goal): Float
 }
 
