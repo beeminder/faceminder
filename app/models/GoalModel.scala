@@ -24,18 +24,22 @@ case class Goal(
     }
 
     def update() = {
-        module.update(this) map { points =>
-            Service.beeminder.post(
-                "/users/" + owner.username + "/goals/" + slug + "/datapoints.json",
-                owner.bee_service.token,
-                Map(
-                    "value" -> points.toString,
-                    "comment" -> "automatic datapoint from Faceminder"
-                )
-            ) map { _ =>
+        val points = module.update(this)
+
+        Service.beeminder.post(
+            "/users/" + owner.username + "/goals/" + slug + "/datapoints.json",
+            owner.bee_service.token,
+            Map(
+                "value" -> points.toString,
+                "comment" -> "automatic datapoint from Faceminder"
+            )
+        ) match {
+            case Some(_) => {
                 lastUpdated = DateTime.now
                 save()
             }
+
+            case None => // do nothing
         }
     }
 

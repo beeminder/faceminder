@@ -53,6 +53,6 @@ trait Module {
     def handleRequest(queryString: Map[String, String]): Map[String, String]
 
     // The number of data points to return to beeminder
-    def update(goal: Goal): Option[Float]
+    def update(goal: Goal): Float
 }
 
