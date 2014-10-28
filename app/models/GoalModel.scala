@@ -24,9 +24,19 @@ case class Goal(
     }
 
     def update() = {
-        lastUpdated = DateTime.now
-        // TODO(sandy): make this save to beeminder too
-        save()
+        module.update(this) map { points =>
+            Service.beeminder.post(
+                "/users/" + owner.username + "/goals/" + slug + "/datapoints.json",
+                owner.bee_service.token,
+                Map(
+                    "value" -> points.toString,
+                    "comment" -> "automatic datapoint from Faceminder"
+                )
+            ) map { _ =>
+                lastUpdated = DateTime.now
+                save()
+            }
+        }
     }
 
     lazy val owner = User.getById(ownerId).get

@@ -34,7 +34,7 @@ object ChatModule extends Module {
         Map()
     }
 
-    def update(goal: Goal): Float = {
+    def update(goal: Goal): Option[Float] = {
         val limit = 5
         val since = (goal.lastUpdated.getMillis / 1000).toString
 
@@ -47,32 +47,35 @@ object ChatModule extends Module {
                     "){from,created_time},updated_time"),
                 "since" -> since
             )
-        ) match {
-            case Some(payload) => {
-                var points = 0
+        ) flatMap { payload =>
+            var points = 0
 
-                // Not the nicest parser in the world, but it works
-                // so that's good enough for me
-                val data = (payload \ "data").as[JsArray].value
-                for (threadVal <- data) {
-                    val thread = threadVal.as[JsObject]
-                    val comments = (thread \ "comments" \ "data").as[JsArray]
+            // Not the nicest parser in the world, but it works
+            // so that's good enough for me
+            val data = (payload \ "data").as[JsArray].value
+            for (threadVal <- data) {
+                val thread = threadVal.as[JsObject]
+                val comments = (thread \ "comments" \ "data").as[JsArray]
 
-                    if (comments.value.length == limit) {
+                if (comments.value.length == limit) {
+                    // If at least limit messages have been sent, consider
+                    // this a datapoint.
+                    points += 1
+                } else {
+                    val participants = (comments \\ "name").toSet.size
+                    if (participants > 1) {
+                        // Otherwise, if both people have sent a message in
+                        // the convo.
                         points += 1
-                    } else {
-                        val participants = (comments \\ "name").toSet.size
-                        Logger.info(participants.toString)
-                        if (participants > 1) {
-                            points += 1
-                        }
                     }
                 }
-
-                points
             }
 
-            case None => 0
+            if (points != 0) {
+                Some(points)
+            } else {
+                None
+            }
         }
     }
 }

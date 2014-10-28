@@ -47,8 +47,6 @@ case class Beeminder (
             case e: Exception => this.error = "Generic Error " + e.getMessage
         }
 
-        Logger.info(this.error)
-
         None
     }
 
@@ -59,8 +57,6 @@ case class Beeminder (
         request = url("https://www.beeminder.com/api/v1" + endpoint).POST <<?
             (params + ("access_token" -> token))
         response = ""
-
-        Logger.info(request.url)
 
         try
         {

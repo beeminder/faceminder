@@ -79,9 +79,7 @@ object GoalController extends Controller {
             "title" -> goalForm.title,
             "goal_type" -> module.manifest.goalType.toString,
             "goaldate" -> ((DateTime.now + 52.weeks).getMillis / 1000).toString,
-            "goalval" -> (52 * goalForm.perWeek).toString,
-            "autodata" -> ("Faceminder: " + module.manifest.name),
-            "dryrun" -> "true"
+            "goalval" -> (52 * goalForm.perWeek).toString
         )
 
         val postData = request.body.asFormUrlEncoded.get.map { case (k, v) =>
