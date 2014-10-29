@@ -8,6 +8,8 @@ import akka.actor.Props
 import akka.event.Logging
 import com.typesafe.config.ConfigFactory
 import com.github.nscala_time.time.Imports._
+
+import plugins.Plugin
 import models._
 
 object Jobs {
@@ -40,7 +42,10 @@ class CronActor extends Actor {
 
     def updateGoals = {
         Logger.info("updating goals")
+
+        Plugin.Available.map(_.beforeUpdate())
         Goal.unmanaged.getAll().map(_.update())
+        Plugin.Available.map(_.afterUpdate())
     }
 }
 

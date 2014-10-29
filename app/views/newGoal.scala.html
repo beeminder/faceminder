@@ -4,7 +4,7 @@
 <body>
 <h1>New Chat Goal</h1>
 <form method="POST" action="@routes.GoalController.create">
-    <input type="hidden" name="moduleId" value="chat" />
+    <input type="hidden" name="pluginId" value="chat" />
     Slug: <input type="text" name="slug" /> <br />
     Title: <input type="text" name="title" /> <br />
     Per week: <input type="number" name="perWeek" /> <br />
@@ -18,3 +18,4 @@
 </form>
 </body>
 </html>
+

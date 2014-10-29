@@ -3,8 +3,8 @@ package utils
 import com.github.nscala_time.time.Imports._
 
 trait Flyweight {
-    type T
     type Key
+    type T <: { val id: Key }
 
     def rawGet(key: Key): Option[T]
 
@@ -28,6 +28,40 @@ trait Flyweight {
                     obj
                 }
             }
+        }
+    }
+
+    def isLoaded(key: Key): Boolean = {
+        cached.contains(key)
+    }
+
+    def preload(objs: Seq[T]) = {
+        val now = DateTime.now
+
+        val (toUpdate, toAdd) = objs.partition { obj =>
+            cached.contains(obj.id)
+        }
+
+        cached.synchronized {
+            cached ++= toAdd.map { obj =>
+                obj.id -> new Access(obj, now)
+            }
+
+            toUpdate.map { obj =>
+                cached(obj.id).lastTouched = now
+            }
+        }
+    }
+
+    def expire(key: Key): Unit = {
+        cached.synchronized {
+            cached -= key
+        }
+    }
+
+    def expire(keys: Seq[Key]): Unit = {
+        cached.synchronized {
+            cached --= keys
         }
     }
 

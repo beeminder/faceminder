@@ -1,11 +1,11 @@
-@(mods: Seq[plugins.Plugin])
+@(plugs: Seq[plugins.Plugin])
 
 <html>
 <body>
 <form method="POST" action="@routes.GoalController.obtain">
-Available modules: <select name="moduleId">
-@for(module <- mods) {
-    <option value="@module.manifest.id">@module.manifest.name</item>
+Available modules: <select name="pluginId">
+@for(plugin <- plugs) {
+    <option value="@plugin.manifest.id">@plugin.manifest.name</item>
 }
 </select><br />
 <input type="submit" />

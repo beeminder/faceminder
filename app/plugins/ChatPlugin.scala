@@ -7,6 +7,7 @@ import play.api.db.slick.Config.driver.simple._
 import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.json._
+import org.scala_tools.time.Imports._
 
 import models._
 
@@ -23,20 +24,32 @@ object ChatPlugin extends Plugin {
 
     def handleRequest(postData: Map[String, String]) = {
         case class OptionsForm(
-            allowSamePerson: String
+            samePersonMinTime: Int
         )
 
         // TODO(sandy): i can't get this to bind a boolean
-        val optionsForm = Form(mapping(
-            "allow_same_person" -> text
+        val form = Form(mapping(
+            "same_person_min_time" -> number
         )(OptionsForm.apply)(OptionsForm.unapply)).bind(postData).get
 
-        new GoalSettings(Map(), "")
+        new GoalSettings(
+            Map(),
+
+            // It would probably be nice to make a constructor for this?
+            (form.samePersonMinTime * 86400).toString + ";"
+        )
+    }
+
+    override def beforeUpdate(): Unit = {
+        Convo.deleteExpired()
     }
 
     def update(goal: Goal): Float = {
         val limit = 5
         val since = (goal.lastUpdated.getMillis / 1000).toString
+
+        // Expensive, so cache it
+        val options = goal.options
 
         Service.facebook.getResource(
             "/me/inbox",
@@ -51,22 +64,35 @@ object ChatPlugin extends Plugin {
             case Some(payload) => {
                 var points = 0
 
+
+                Convo.preload(Convo.unmanaged.getByGoal(goal))
+
                 // Not the nicest parser in the world, but it works
                 // so that's good enough for me
                 val data = (payload \ "data").as[JsArray].value
+
                 for (threadVal <- data) {
                     val thread = threadVal.as[JsObject]
-                    val comments = (thread \ "comments" \ "data").as[JsArray]
+                    val recipient = (thread \ "id").as[JsString].value
 
-                    if (comments.value.length == limit) {
-                        points += 1
-                    } else {
+                    // If the convo is loaded, it has yet to expire
+                    if (!Convo.isLoaded(Convo.getKey(goal, recipient))) {
+                        val comments = (thread \ "comments" \ "data").as[JsArray]
+
                         val participants = (comments \\ "name").toSet.size
-                        if (participants > 1) {
+                        if (comments.value.length == limit || participants > 1) {
                             points += 1
+
+                            Convo.create(
+                                goal,
+                                recipient,
+                                DateTime.now + options.samePersonMinTime.seconds
+                            )
                         }
                     }
                 }
+
+                Convo.reclaim(DateTime.now)
 
                 Logger.info(goal.slug + ": " + points.toString)
                 points
@@ -75,5 +101,25 @@ object ChatPlugin extends Plugin {
             case None => 0
         }
     }
+
+    case class GoalChatView(underlying: Goal) {
+        case class Options(
+                samePersonMinTime: Int,
+                friendLists: Seq[String]) {
+            val useFriendLists = friendLists.length > 0
+        }
+
+        val options = {
+            val bits = underlying.rawOptions.split(";")
+            new Options(
+                bits(0).toInt,
+
+                // TODO(sandy): this should depend on bits haha
+                Seq()
+            )
+        }
+    }
+
+    implicit def implRichChatGoal(underlying: Goal): GoalChatView = new GoalChatView(underlying)
 }
 

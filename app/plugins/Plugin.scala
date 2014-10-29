@@ -58,5 +58,8 @@ trait Plugin {
 
     // The number of data points to return to beeminder
     def update(goal: Goal): Float
+
+    def beforeUpdate(): Unit = { }
+    def afterUpdate(): Unit = { }
 }
 

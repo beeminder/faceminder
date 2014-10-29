@@ -15,7 +15,7 @@ case class Goal(
         slug: String,
         title: String,
         var lastUpdated: DateTime,
-        var options: String) {
+        var rawOptions: String) {
     private val Table = TableQuery[GoalModel]
 
     def save() = {
@@ -81,7 +81,12 @@ object Goal extends Flyweight {
         }
     }
 
-    implicit def implicitGoalColumnMapper = MappedColumnType.base[Seq[Goal], String](
+    implicit def implicitGoalColumnMapper = MappedColumnType.base[Goal, Int](
+        g => g.id,
+        i => Goal.getById(i).get
+    )
+
+    implicit def implicitSeqGoalColumnMapper = MappedColumnType.base[Seq[Goal], String](
         sg => sg.map { g => g.id.toString }.mkString(","),
         s => s match {
             case "" => Seq()
