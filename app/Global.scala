@@ -11,12 +11,11 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.duration._
 
 import actors._
-import modules._
 
 object Global extends GlobalSettings {
-    val conf = ConfigFactory.load
-    val refreshFrequency = conf.getInt("faceminder.refreshFrequency")
-    val updateFrequency = conf.getInt("faceminder.updateFrequency")
+    val config = ConfigFactory.load
+    val refreshFrequency = config.getInt("faceminder.refreshFrequency")
+    val updateFrequency = config.getInt("faceminder.updateFrequency")
 
     val cronActor = Akka.system.actorOf(
         Props[CronActor],

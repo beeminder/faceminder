@@ -62,15 +62,14 @@ object Service extends Flyweight {
     }
 
     // TODO(sandy): these don't really belong here
-    private val conf = ConfigFactory.load
     val facebook = new oauth2.FaceBook(
-        conf.getString("facebook.appID"),
-        conf.getString("facebook.secret")
+        Global.config.getString("facebook.appID"),
+        Global.config.getString("facebook.secret")
     )
 
     val beeminder = new oauth2.Beeminder(
-        conf.getString("beeminder.appID"),
-        conf.getString("beeminder.secret")
+        Global.config.getString("beeminder.appID"),
+        Global.config.getString("beeminder.secret")
     )
 
 

@@ -4,12 +4,10 @@
 
 # Home page
 GET     /                           controllers.Application.index
-GET     /example                    controllers.ExampleController.index
-POST    /example/form               controllers.ExampleController.update
 
-GET     /auth/:provider             controllers.OAuth2Controller.authenticate(provider)
-GET     /auth/:provider/callback    controllers.OAuth2Controller.callback(provider)
-GET     /auth/facebook/obtain       controllers.OAuth2Controller.obtainPermission
+GET     /auth/:provider             controllers.AuthController.authenticate(provider)
+GET     /auth/:provider/callback    controllers.AuthController.callback(provider)
+GET     /auth/facebook/obtain       controllers.AuthController.obtainPermission
 
 POST    /goal/obtain                controllers.GoalController.obtain
 # okay this is pretty icky but maybe(?) necessary for permission granting?

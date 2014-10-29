@@ -5,16 +5,17 @@ import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 import com.github.nscala_time.time.Imports._
 
-import modules._
+import plugins._
 import utils.Flyweight
 
 case class Goal(
         id: Int,
-        module: Module,
+        plugin: Plugin,
         ownerId: Int,
         slug: String,
         title: String,
-        var lastUpdated: DateTime) {
+        var lastUpdated: DateTime,
+        var options: String) {
     private val Table = TableQuery[GoalModel]
 
     def save() = {
@@ -24,7 +25,7 @@ case class Goal(
     }
 
     def update() = {
-        val points = module.update(this)
+        val points = plugin.update(this)
 
         Service.beeminder.post(
             "/users/" + owner.username + "/goals/" + slug + "/datapoints.json",
@@ -51,11 +52,11 @@ object Goal extends Flyweight {
     type Key = Int
     private val Table = TableQuery[GoalModel]
 
-    def create(_1: Module, owner: User, _3: String, _4: String) = {
+    def create(_1: Plugin, owner: User, _3: String, _4: String, _5: String) = {
         val goal = getById(
             DB.withSession { implicit session =>
                 (Table returning Table.map(_.id)) +=
-                    new Goal(0, _1, owner.id, _3, _4, DateTime.now)
+                    new Goal(0, _1, owner.id, _3, _4, DateTime.now, _5)
             }
         ).get
 
@@ -93,13 +94,14 @@ class GoalModel(tag: Tag) extends Table[Goal](tag, "Goal") {
     import utils.DateConversions._
 
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-    def module = column[Module]("module")
+    def plugin = column[Plugin]("plugin")
     def ownerId = column[Int]("owner")
     def slug = column[String]("slug")
     def title = column[String]("title")
     def lastUpdated = column[DateTime]("lastUpdated")
+    def options = column[String]("options")
 
     val goal = Goal.apply _
-    def * = (id, module, ownerId, slug, title, lastUpdated) <> (goal.tupled, Goal.unapply _)
+    def * = (id, plugin, ownerId, slug, title, lastUpdated, options) <> (goal.tupled, Goal.unapply _)
 }
 

@@ -27,7 +27,7 @@ case class User(
 
     def permissions: Set[String] = {
         goals.flatMap { goal =>
-            goal.module.manifest.permissions
+            goal.plugin.manifest.permissions
         }.toSet
     }
 

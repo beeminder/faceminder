@@ -5,11 +5,11 @@ import play.api.mvc._
 
 import actions._
 
-import modules._
+import plugins._
 
 object Application extends Controller {
     def index = Authenticated {
-        Ok(views.html.moduleSelection(Module.Available))
+        Ok(views.html.moduleSelection(Plugin.Available))
     }
 }
 

@@ -1,4 +1,4 @@
-package modules
+package plugins
 
 import play.api.Logger
 import play.api.Play.current
@@ -10,8 +10,8 @@ import play.api.libs.json._
 
 import models._
 
-object ChatModule extends Module {
-    def manifest = new ModuleManifest(
+object ChatPlugin extends Plugin {
+    def manifest = new Manifest(
         "chat",
         "Stay in touch",
         "Initiate chats with Facebook friends",
@@ -31,7 +31,7 @@ object ChatModule extends Module {
             "allow_same_person" -> text
         )(OptionsForm.apply)(OptionsForm.unapply)).bind(postData).get
 
-        Map()
+        new GoalSettings(Map(), "")
     }
 
     def update(goal: Goal): Float = {
@@ -62,16 +62,13 @@ object ChatModule extends Module {
                         points += 1
                     } else {
                         val participants = (comments \\ "name").toSet.size
-                        Logger.info(participants.toString)
                         if (participants > 1) {
                             points += 1
                         }
                     }
                 }
 
-                Logger.info("number of points obtained:")
-                Logger.info(points.toString)
-
+                Logger.info(goal.slug + ": " + points.toString)
                 points
             }
 

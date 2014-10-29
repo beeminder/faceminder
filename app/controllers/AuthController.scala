@@ -8,9 +8,9 @@ import oauth2._
 import actions._
 import models._
 
-object OAuth2Controller extends Controller {
+object AuthController extends Controller {
     def authenticate(provider: String) = Authenticated { implicit request =>
-        val callback_uri = routes.OAuth2Controller.callback(provider).absoluteURL()
+        val callback_uri = routes.AuthController.callback(provider).absoluteURL()
 
         provider match {
             case "beeminder" =>
@@ -37,7 +37,7 @@ object OAuth2Controller extends Controller {
 
     // Grant additional permissions to a facebook token
     def obtainPermission = Authenticated { implicit request =>
-        val callback_uri = routes.OAuth2Controller.callback("facebook").absoluteURL()
+        val callback_uri = routes.AuthController.callback("facebook").absoluteURL()
 
         request.session.get("obtain_permissions") match {
             case Some(permStr) => {
