@@ -38,7 +38,7 @@ object ChatPlugin extends Plugin {
 
             // It would probably be nice to make a constructor for this?
             (form.samePersonMinTime * 86400).toString + ";" +
-                form.allowIncoming.toString + ";"
+                form.allowIncoming.toString
         )
     }
 
@@ -119,19 +119,14 @@ object ChatPlugin extends Plugin {
     case class GoalChatView(underlying: Goal) {
         case class Options(
                 samePersonMinTime: Int,
-                allowIncoming: Boolean,
-                friendLists: Seq[String]) {
-            val useFriendLists = friendLists.length > 0
+                allowIncoming: Boolean) {
         }
 
         val options = {
             val bits = underlying.rawOptions.split(";")
             new Options(
                 bits(0).toInt,
-                bits(1).toBoolean,
-
-                // TODO(sandy): this should depend on bits haha
-                Seq()
+                bits(1).toBoolean
             )
         }
     }
