@@ -24,19 +24,21 @@ object ChatPlugin extends Plugin {
 
     def handleRequest(postData: Map[String, String]) = {
         case class OptionsForm(
-            samePersonMinTime: Int
+            samePersonMinTime: Int,
+            allowIncoming: Boolean
         )
 
-        // TODO(sandy): i can't get this to bind a boolean
         val form = Form(mapping(
-            "same_person_min_time" -> number
+            "same_person_min_time" -> number,
+            "allow_incoming" -> boolean
         )(OptionsForm.apply)(OptionsForm.unapply)).bind(postData).get
 
         new GoalSettings(
             Map(),
 
             // It would probably be nice to make a constructor for this?
-            (form.samePersonMinTime * 86400).toString + ";"
+            (form.samePersonMinTime * 86400).toString + ";" +
+                form.allowIncoming.toString + ";"
         )
     }
 
@@ -73,21 +75,33 @@ object ChatPlugin extends Plugin {
 
                 for (threadVal <- data) {
                     val thread = threadVal.as[JsObject]
-                    val recipient = (thread \ "id").as[JsString].value
+                    val recipient = (thread \ "id").as[String]
 
-                    // If the convo is loaded, it has yet to expire
+                    // If the convo is loaded, it has yet to expire, so it
+                    // doesn't count
                     if (!Convo.isLoaded(Convo.getKey(goal, recipient))) {
                         val comments = (thread \ "comments" \ "data").as[JsArray]
 
-                        val participants = (comments \\ "name").toSet.size
-                        if (comments.value.length == limit || participants > 1) {
-                            points += 1
+                        Logger.info("am i the originator? " + ((comments(0) \ "from" \ "id").as[String] == goal.owner.fb_service.get.username).toString)
+                        Logger.info("do i have to be? " + (!options.allowIncoming).toString)
 
-                            Convo.create(
-                                goal,
-                                recipient,
-                                DateTime.now + options.samePersonMinTime.seconds
-                            )
+                        // Ensure we allow incoming conversations, or that we
+                        // are the originator
+                        if (options.allowIncoming ||
+                                (comments(0) \ "from" \ "id").as[String] ==
+                                goal.owner.fb_service.get.username) {
+                            val participants = (comments \\ "name").toSet.size
+                            Logger.info("participants: " + participants.toString)
+                            Logger.info("comments: " + comments.value.length.toString)
+                            if (comments.value.length == limit || participants > 1) {
+                                points += 1
+
+                                Convo.create(
+                                    goal,
+                                    recipient,
+                                    DateTime.now + options.samePersonMinTime.seconds
+                                )
+                            }
                         }
                     }
                 }
@@ -105,6 +119,7 @@ object ChatPlugin extends Plugin {
     case class GoalChatView(underlying: Goal) {
         case class Options(
                 samePersonMinTime: Int,
+                allowIncoming: Boolean,
                 friendLists: Seq[String]) {
             val useFriendLists = friendLists.length > 0
         }
@@ -113,6 +128,7 @@ object ChatPlugin extends Plugin {
             val bits = underlying.rawOptions.split(";")
             new Options(
                 bits(0).toInt,
+                bits(1).toBoolean,
 
                 // TODO(sandy): this should depend on bits haha
                 Seq()

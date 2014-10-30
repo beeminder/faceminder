@@ -64,6 +64,8 @@ case class FaceBook (
             (params + ("access_token" -> token))
         response = ""
 
+        Logger.info(request.url)
+
         try
         {
             response = Await.result(browser(request OK as.String), 10 seconds)

@@ -4,7 +4,6 @@ import play.api.Play.current
 import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 import com.github.nscala_time.time.Imports._
-import com.typesafe.config.ConfigFactory
 
 import utils.Flyweight
 
@@ -12,6 +11,7 @@ import utils.Flyweight
 case class Service(
         id: Int,
         provider: String,
+        username: String, // note, this is the service's identifier for the user
         var token: String,
         var expiry: Option[DateTime]) {
 
@@ -52,11 +52,11 @@ object Service extends Flyweight {
     type Key = Int
     private val Table = TableQuery[ServiceModel]
 
-    def create(_1: String, _2: String, _3: Option[DateTime]) = {
+    def create(_1: String, _2: String, _3: String, _4: Option[DateTime]) = {
         getById(
             DB.withSession { implicit session =>
                 (Table returning Table.map(_.id)) +=
-                    new Service(0, _1, _2, _3)
+                    new Service(0, _1, _2, _3, _4)
             }
         ).get
     }
@@ -101,6 +101,7 @@ class ServiceModel(tag: Tag) extends Table[Service](tag, "Service") {
 
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def provider = column[String]("provider")
+    def username = column[String]("username")
     def token = column[String]("token")
     def expiry = column[Option[DateTime]]("expiry")
 
@@ -108,6 +109,7 @@ class ServiceModel(tag: Tag) extends Table[Service](tag, "Service") {
     def * = (
         id,
         provider,
+        username,
         token,
         expiry
     ) <> (service.tupled, Service.unapply _)

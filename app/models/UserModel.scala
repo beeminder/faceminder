@@ -71,7 +71,7 @@ object User extends Flyweight {
         -1,
         "Guest",
         Seq(),
-        new Service(0, "beeminder", "", None),
+        new Service(0, "beeminder", "", "", None),
         None)
 }
 

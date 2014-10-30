@@ -73,8 +73,25 @@ object AuthController extends Controller {
                             fb.expiry = Some(token.expiry)
                             fb.save()
                         } else {
+                            // TODO(sandy): this can fail
+                            val idPayload = Service.facebook.getResource(
+                                "/me",
+                                token.token,
+                                Map("fields" -> "id")
+                            ).get
+
+                            Logger.info(idPayload.toString)
+
+                            val username = (idPayload \ "id").as[String]
+
                             // Create a new one, because it doesn't exist yet
-                            val fb = Service.create("facebook", token.token, Some(token.expiry))
+                            val fb = Service.create(
+                                "facebook",
+                                username,
+                                token.token,
+                                Some(token.expiry)
+                            )
+
                             request.user.fb_service = Some(fb)
                             request.user.save()
                         }
@@ -104,7 +121,7 @@ object AuthController extends Controller {
                         User.create(
                             username,
                             Seq(),
-                            Service.create("beeminder", token, None),
+                            Service.create("beeminder", username, token, None),
                             None
                         )
                     }
