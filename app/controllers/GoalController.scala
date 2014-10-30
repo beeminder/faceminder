@@ -13,6 +13,35 @@ import models._
 import plugins._
 
 object GoalController extends Controller {
+    def update(slug: String) = Authenticated { implicit request =>
+        Goal.getBySlug(request.user, slug) match {
+            case Some(goal) => {
+                Ok(views.html.newGoal(goal.plugin, Some(goal)))
+            }
+
+            case None => NotFound
+        }
+    }
+
+    def change(slug: String) = Authenticated { implicit request =>
+        Goal.getBySlug(request.user, slug) match {
+            case Some(goal) => {
+                val goalSettings = getGoalSettings(
+                    goal.plugin,
+                    request.body.asFormUrlEncoded.get
+                )
+
+                goal.rawOptions = goalSettings.options
+                goal.save()
+
+                // TODO(sandy): point this somewhere useful
+                Ok("saved!")
+            }
+
+            case None => NotFound
+        }
+    }
+
     def obtain = Authenticated { implicit request =>
         case class GoalForm(
             pluginId: String
@@ -24,37 +53,34 @@ object GoalController extends Controller {
 
         val plugin = Plugin.getById(goalForm.pluginId).get
 
-        val user = request.user
-        if (user.isReal) {
-            val nextPage = routes.GoalController.setup(goalForm.pluginId).absoluteURL()
-            val toGrant = plugin.manifest.permissions.toSet - user.permissions
+        val nextPage = routes.GoalController.setup(goalForm.pluginId).absoluteURL()
+        val toGrant = plugin.manifest.permissions.toSet - request.user.permissions
 
-            if (toGrant.nonEmpty) {
-                Redirect(
-                    routes.AuthController.obtainPermission.absoluteURL()
-                ).withSession(session +
-                    ("obtain_permissions" -> toGrant.mkString(",")) +
-                    ("redirect_to" -> nextPage)
-                )
-            } else {
-                Redirect(nextPage)
-            }
+        if (toGrant.nonEmpty) {
+            Redirect(
+                routes.AuthController.obtainPermission.absoluteURL()
+            ).withSession(session +
+                ("obtain_permissions" -> toGrant.mkString(",")) +
+                ("redirect_to" -> nextPage)
+            )
         } else {
-            // TODO(sandy): this isn't right, we need to redirect back to the proper place
-            // it would be nice to have a redirect framework handler thing
-            Redirect(routes.AuthController.authenticate("beeminder").absoluteURL())
+            Redirect(nextPage)
         }
     }
 
     def setup(pluginId: String) = Authenticated { implicit request =>
-        if (request.user.isReal) {
-            Plugin.getById(pluginId) match {
-                case Some(plugin) => Ok(views.html.newGoal(plugin.renderOptions))
-                case None => BadRequest
-            }
-        } else {
-            Forbidden
+        Plugin.getById(pluginId) match {
+            case Some(plugin) => Ok(views.html.newGoal(plugin, None))
+            case None => BadRequest
         }
+    }
+
+    def getGoalSettings(plugin: plugins.Plugin, formUrlEncoded: Map[String, Seq[String]]) = {
+        plugin.handleRequest(
+            formUrlEncoded.map { case (k, v) =>
+                k -> v.mkString(",")
+            }
+        )
     }
 
     def create = Authenticated { implicit request =>
@@ -82,11 +108,7 @@ object GoalController extends Controller {
             "goalval" -> (52 * goalForm.perWeek).toString
         )
 
-        val postData = request.body.asFormUrlEncoded.get.map { case (k, v) =>
-            k -> v.mkString(",")
-        }
-
-        val goalSettings = plugin.handleRequest(postData)
+        val goalSettings = getGoalSettings(plugin, request.body.asFormUrlEncoded.get)
 
         val user = request.user
         val result = Service.beeminder.post(

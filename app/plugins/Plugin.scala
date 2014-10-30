@@ -50,7 +50,7 @@ trait Plugin {
     def manifest: Manifest
 
     // HTML for additional options to display on the goal creation page
-    def renderOptions: Option[play.api.templates.Html]
+    def renderOptions: Option[Option[Goal] => play.api.templates.Html]
 
     // Custom handler for the additional options.
     // Returns: a map of parameters to override in goal creation

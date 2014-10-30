@@ -30,7 +30,5 @@ object Global extends GlobalSettings {
     Akka.system.scheduler.schedule(60.seconds, updateFrequency.seconds) {
         cronActor ! Jobs.UpdateGoals
     }
-
-    // TODO(sandy): need to reclaim our flyweights occassionally
 }
 

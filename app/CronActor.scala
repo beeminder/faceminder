@@ -46,6 +46,11 @@ class CronActor extends Actor {
         Plugin.Available.map(_.beforeUpdate())
         Goal.unmanaged.getAll().map(_.update())
         Plugin.Available.map(_.afterUpdate())
+
+        // Reclaim all of our flyweights to keep memory usage low
+        User.reclaim(DateTime.now)
+        Service.reclaim(DateTime.now)
+        Goal.reclaim(DateTime.now)
     }
 }
 

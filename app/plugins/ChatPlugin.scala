@@ -20,7 +20,7 @@ object ChatPlugin extends Plugin {
         GoalType.DoMore
     )
 
-    def renderOptions = Some(views.html.goalOptions())
+    def renderOptions = Some(views.html.goalOptions(_))
 
     def handleRequest(postData: Map[String, String]) = {
         case class OptionsForm(

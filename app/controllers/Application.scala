@@ -8,8 +8,12 @@ import actions._
 import plugins._
 
 object Application extends Controller {
-    def index = Authenticated {
-        Ok(views.html.moduleSelection(Plugin.Available))
+    def index = UserAware { implicit request =>
+        if (request.user.isReal) {
+            Ok(views.html.goalList(request.user, Plugin.Available))
+        } else {
+            Ok("you should login (but we don't have a login yet)")
+        }
     }
 }
 

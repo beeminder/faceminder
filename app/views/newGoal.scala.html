@@ -1,20 +1,37 @@
-@(options: Option[play.api.templates.Html])
+@(plugin: plugins.Plugin, optGoal: Option[Goal])
 
 <html>
 <body>
-<h1>New Chat Goal</h1>
-<form method="POST" action="@routes.GoalController.create">
-    <input type="hidden" name="pluginId" value="chat" />
-    Slug: <input type="text" name="slug" /> <br />
-    Title: <input type="text" name="title" /> <br />
-    Per week: <input type="number" name="perWeek" /> <br />
+<h1>
+    @optGoal match {
+        case Some(goal) => { Update Goal: "@goal.title" }
+        case None => { New Goal }
+    }
+</h1>
+    @optGoal match {
+        case None => {
+        <form method="POST" action="@routes.GoalController.create">
+            <input type="hidden" name="pluginId" value="@plugin.manifest.id" />
+            Slug: <input type="text" name="slug" /> <br />
+            Title: <input type="text" name="title" /> <br />
+            Per week: <input type="number" name="perWeek" /> <br />
+        }
+
+        case Some(goal) => {
+        <form method="POST" action="@routes.GoalController.update(goal.slug)">
+        }
+    }
+
     <div class="options">
-        @options match {
-            case Some(opts) => { @opts }
+        @plugin.renderOptions match {
+            case Some(render) => { @render(optGoal) }
             case None => { }
         }
     </div>
-    <input type="submit" />
+    <input type="submit" value="@optGoal match {
+        case None => {Create}
+        case Some(_) => {Update}
+    }" />
 </form>
 </body>
 </html>

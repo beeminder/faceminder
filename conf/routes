@@ -9,8 +9,12 @@ GET     /auth/:provider             controllers.AuthController.authenticate(prov
 GET     /auth/:provider/callback    controllers.AuthController.callback(provider)
 GET     /auth/facebook/obtain       controllers.AuthController.obtainPermission
 
+
+# award for best naming conventions of the year award goes: sandy!
+GET     /goal/update/:slug          controllers.GoalController.update(slug)
+POST    /goal/update/:slug          controllers.GoalController.change(slug)
+
 POST    /goal/obtain                controllers.GoalController.obtain
-# okay this is pretty icky but maybe(?) necessary for permission granting?
 GET     /goal/setup/:moduleId       controllers.GoalController.setup(moduleId)
 POST    /goal/create                controllers.GoalController.create
 

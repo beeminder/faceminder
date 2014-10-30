@@ -73,6 +73,12 @@ object Goal extends Flyweight {
         }
     }
 
+    def getBySlug(owner: User, slug: String): Option[Goal] = {
+        DB.withSession { implicit session =>
+            Table.filter(_.ownerId === owner.id).filter(_.slug === slug).firstOption
+        }.flatMap(goal => Goal.getById(goal.id))
+    }
+
     object unmanaged {
         def getAll(): Seq[Goal] = {
             DB.withSession { implicit session =>
