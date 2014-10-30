@@ -19,7 +19,7 @@ object DebugController extends Controller {
         ).withSession(session + ("obtain_permissions" -> permission))
     }
 
-    def destroyService(service: String) = Action { implicit request =>
+    def destroyService(service: String) = UserAware { implicit request =>
         DB.withSession { implicit session =>
             TableQuery[ServiceModel].filter(_.provider === service).delete
         }

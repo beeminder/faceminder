@@ -9,13 +9,13 @@ import actions._
 import models._
 
 object AuthController extends Controller {
-    def authenticate(provider: String) = Authenticated { implicit request =>
+    def authenticate(provider: String) = UserAware { implicit request =>
         val callback_uri = routes.AuthController.callback(provider).absoluteURL()
 
         provider match {
             case "beeminder" =>
                 if (!request.user.isReal) {
-                    TemporaryRedirect(Service.beeminder.getAuthURI(callback_uri))
+                    Redirect(Service.beeminder.getAuthURI(callback_uri))
                 } else {
                     Ok
                 }
@@ -23,7 +23,7 @@ object AuthController extends Controller {
             case "facebook" =>
                 if (request.user.isReal) {
                     if (!request.user.fb_service.isDefined) {
-                        TemporaryRedirect(Service.facebook.getAuthURI(callback_uri, List()))
+                        Redirect(Service.facebook.getAuthURI(callback_uri, List()))
                     } else {
                         Ok
                     }
@@ -41,22 +41,19 @@ object AuthController extends Controller {
 
         request.session.get("obtain_permissions") match {
             case Some(permStr) => {
-                if (request.user.isReal) {
-                    val permissions = permStr.split(",") ++ request.user.permissions
-                    Logger.info("requesting " + permissions.mkString(","))
-                    TemporaryRedirect(
-                        Service.facebook.getAuthURI(callback_uri, permissions)
-                    ).withSession(session - "obtain_permissions")
-                } else {
-                    Forbidden
-                }
+               val permissions: Set[String] = permStr.split(",") ++ request.user.permissions
+               Logger.info("requesting " + permissions.mkString(","))
+
+               Redirect(
+                   Service.facebook.getAuthURI(callback_uri, permissions)
+               ).withSession(session - "obtain_permissions")
             }
 
             case None => Ok
         }
     }
 
-    def callback(provider: String) = Authenticated { implicit request =>
+    def callback(provider: String) = UserAware { implicit request =>
         // TODO(sandy): this is super ugly, clean it up
         provider match {
             case "facebook" => {
