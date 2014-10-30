@@ -41,7 +41,7 @@ object AuthController extends Controller {
 
         request.session.get("obtain_permissions") match {
             case Some(permStr) => {
-               val permissions: Set[String] = permStr.split(",") ++ request.user.permissions
+               val permissions = (permStr.split(",") ++ request.user.permissions).distinct
                Logger.info("requesting " + permissions.mkString(","))
 
                Redirect(
