@@ -16,7 +16,7 @@ object GoalController extends Controller {
     def update(slug: String) = Authenticated { implicit request =>
         Goal.getBySlug(request.user, slug) match {
             case Some(goal) => {
-                Ok(views.html.newGoal(goal.plugin, Some(goal)))
+                Ok(views.html.newGoal(request.user, goal.plugin, Some(goal)))
             }
 
             case None => NotFound
@@ -70,7 +70,7 @@ object GoalController extends Controller {
 
     def setup(pluginId: String) = Authenticated { implicit request =>
         Plugin.getById(pluginId) match {
-            case Some(plugin) => Ok(views.html.newGoal(plugin, None))
+            case Some(plugin) => Ok(views.html.newGoal(request.user, plugin, None))
             case None => BadRequest
         }
     }
@@ -119,7 +119,7 @@ object GoalController extends Controller {
 
         if (result.isDefined) {
             Goal.create(plugin, user, goalForm.slug, goalForm.title, goalSettings.options)
-            Ok("cool!")
+            Redirect(routes.Application.index.absoluteURL())
         } else {
             // TODO(sandy): do something smart here
             InternalServerError

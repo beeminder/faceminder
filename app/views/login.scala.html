@@ -1,0 +1,20 @@
+@()
+
+@preamble("Home")
+
+<p>
+Faceminder is a service that connects your Facebook account to
+<a href="http://beeminder.com">Beeminder</a>, allowing you to mind your social
+media habits, such as how many people you regularly stay in touch with.
+</p>
+
+Getting started is easy, just click here:
+
+<center>
+<form method="GET" action="@routes.AuthController.authenticate("beeminder")">
+    <input type="submit" value="Connect to Beeminder" />
+</form>
+</center>
+
+@footer()
+

@@ -17,7 +17,8 @@ object ChatPlugin extends Plugin {
         "Stay in touch",
         "Initiate chats with Facebook friends",
         Seq("read_mailbox"),
-        GoalType.DoMore
+        GoalType.DoMore,
+        21
     )
 
     def renderOptions = Some(views.html.goalOptions(_))

@@ -9,6 +9,7 @@ GET     /auth/:provider             controllers.AuthController.authenticate(prov
 GET     /auth/:provider/callback    controllers.AuthController.callback(provider)
 GET     /auth/facebook/obtain       controllers.AuthController.obtainPermission
 
+GET     /logout                     controllers.AuthController.logout
 
 # award for best naming conventions of the year award goes: sandy!
 GET     /goal/update/:slug          controllers.GoalController.update(slug)

@@ -17,7 +17,7 @@ object AuthController extends Controller {
                 if (!request.user.isReal) {
                     Redirect(Service.beeminder.getAuthURI(callback_uri))
                 } else {
-                    Ok
+                    Redirect(routes.Application.index.absoluteURL())
                 }
 
             case "facebook" =>
@@ -25,7 +25,7 @@ object AuthController extends Controller {
                     if (!request.user.fb_service.isDefined) {
                         Redirect(Service.facebook.getAuthURI(callback_uri, List()))
                     } else {
-                        Ok
+                        Redirect(routes.Application.index.absoluteURL())
                     }
                 } else {
                     Forbidden
@@ -113,7 +113,11 @@ object AuthController extends Controller {
                 val username = (payload \ "username").as[String]
 
                 val user = User.getByUsername(username) match {
-                    case Some(u) => u
+                    case Some(u) => {
+                        u.bee_service.token = token
+                        u.bee_service.save()
+                        u
+                    }
                     case None => {
                         User.create(
                             username,
@@ -124,10 +128,18 @@ object AuthController extends Controller {
                     }
                 }
 
-                Ok.withSession(session +
+                Redirect(
+                    routes.Application.index.absoluteURL()
+                ).withSession(session +
                     ("user_id" -> user.id.toString)
                 )
             }
         }
+    }
+
+    def logout = Action { implicit request =>
+        Redirect(
+            routes.Application.index.absoluteURL()
+        ).withSession(session - "user_id")
     }
 }

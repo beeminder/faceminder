@@ -12,7 +12,7 @@ object Application extends Controller {
         if (request.user.isReal) {
             Ok(views.html.goalList(request.user, Plugin.Available))
         } else {
-            Ok("you should login (but we don't have a login yet)")
+            Ok(views.html.login())
         }
     }
 }

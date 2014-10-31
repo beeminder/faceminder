@@ -1,7 +1,7 @@
 @(optGoal: Option[Goal])
 @import scala._; val options = optGoal.map { goal => new plugins.ChatPlugin.GoalChatView(goal).options }
 
-Allow incoming conversations:
+<label>Count people talking to me:</label>
 <input type="checkbox" name="allow_incoming" value="true"
 @options match {
     case Some(opts) => { @if(opts.allowIncoming) { checked="checked" } else { } }
@@ -9,9 +9,9 @@ Allow incoming conversations:
 }
 /><br />
 
-Wait how many days before chats with same person count again:
+<label>Count people again after:</label>
 <input type="number" name="same_person_min_time" value="@options match {
     case Some(opts) => {@(opts.samePersonMinTime / 86400)}
-    case None => {0}
-}" />
+    case None => {1}
+}" /> days
 

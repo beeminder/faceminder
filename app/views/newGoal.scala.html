@@ -1,38 +1,55 @@
-@(plugin: plugins.Plugin, optGoal: Option[Goal])
+@(user: models.User, plugin: plugins.Plugin, optGoal: Option[Goal])
 
-<html>
-<body>
-<h1>
+@preamble(optGoal match {
+    case Some(goal) => "Update Goal // " + goal.title
+    case None => "New Goal"
+})
+
+<h3>
     @optGoal match {
         case Some(goal) => { Update Goal: "@goal.title" }
         case None => { New Goal }
     }
-</h1>
-    @optGoal match {
-        case None => {
-        <form method="POST" action="@routes.GoalController.create">
-            <input type="hidden" name="pluginId" value="@plugin.manifest.id" />
-            Slug: <input type="text" name="slug" /> <br />
-            Title: <input type="text" name="title" /> <br />
-            Per week: <input type="number" name="perWeek" /> <br />
-        }
+</h3>
+@optGoal match {
+case None => {
+    <form method="POST" action="@routes.GoalController.create">
+        <input type="hidden" name="pluginId" value="@plugin.manifest.id" />
+        <label>Goal Name:</label> <input type="text" name="title" placeholder="eg. Stay in touch" /> <br />
+        <label>Goal URL:</label> http://beeminder.com/@user.username/<input type="text" name="slug" placeholder="eg. @plugin.manifest.id" /> <br />
+        <label>Commit to:</label> <input type="number" name="perWeek" value="@plugin.manifest.perWeekDefault" /> per week <br />
+}
 
-        case Some(goal) => {
-        <form method="POST" action="@routes.GoalController.update(goal.slug)">
-        }
-    }
+case Some(goal) => {
+    <form method="POST" action="@routes.GoalController.update(goal.slug)">
+}
+}
 
-    <div class="options">
-        @plugin.renderOptions match {
-            case Some(render) => { @render(optGoal) }
-            case None => { }
-        }
+@plugin.renderOptions match {
+case Some(render) => {
+@if(!optGoal.isDefined) {
+    <hr />
+    <div class="hiddenLabel"></div>
+    <div class="hidden">
+}
+
+    @render(optGoal)
+
+@if(!optGoal.isDefined) {
     </div>
-    <input type="submit" value="@optGoal match {
-        case None => {Create}
-        case Some(_) => {Update}
-    }" />
+} else {
+    <br />
+}
+}
+case None => { }
+}
+
+<input type="submit" value="@optGoal match {
+    case None => {Create}
+    case Some(_) => {Update}
+}" />
+
 </form>
-</body>
-</html>
+
+@footer()
 

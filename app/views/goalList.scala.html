@@ -1,26 +1,36 @@
 @(user: models.User, plugs: Seq[plugins.Plugin])
 
-<html>
-<head>
-</head>
-<body>
+@preamble("Goals")
+
+@if(user.goals.length == 0) {
+    <div class="message">
+        You have no goals yet!
+    </div>
+    <br />
+}
+
+<p>
+    Logged in as <a href="http://beeminder.com/@user.username">@user.username</a>. <a href="@routes.AuthController.logout">Log out</a>.
+</p>
 
 <form method="POST" action="@routes.GoalController.obtain">
 New Goal: <select name="pluginId">
 @for(plugin <- plugs) {
     <option value="@plugin.manifest.id">@plugin.manifest.name</item>
 }
-</select>
+</select><br />
 <input type="submit" value="Create" /><br />
+</form>
 
 @if(user.goals.length > 0) {
+<p><br /></p>
+<h3>Current Goals</h3>
 <ul>
     @for(goal <- user.goals) {
     <li><a href="@routes.GoalController.update(goal.slug)">@goal.title</a> (@goal.plugin.manifest.name)</li>
     }
 </ul>
-} else {
-    <h1>You have no goals yet!</h1>
 }
-</body>
-</html>
+
+@footer()
+

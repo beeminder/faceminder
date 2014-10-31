@@ -40,7 +40,8 @@ case class Manifest(
         name: String,
         description: String,
         permissions: Seq[String],
-        goalType: GoalType.GoalType)
+        goalType: GoalType.GoalType,
+        perWeekDefault: Int)
 
 case class GoalSettings(
         requestParams: Map[String, String],
