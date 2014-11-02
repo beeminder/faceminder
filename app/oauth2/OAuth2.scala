@@ -141,3 +141,17 @@ class OAuth2
     }
 }
 
+object ServiceProvider {
+    import models.Global
+
+    val facebook = new oauth2.FaceBook(
+        Global.config.getString("facebook.appID"),
+        Global.config.getString("facebook.secret")
+    )
+
+    val beeminder = new oauth2.Beeminder(
+        Global.config.getString("beeminder.appID"),
+        Global.config.getString("beeminder.secret")
+    )
+}
+

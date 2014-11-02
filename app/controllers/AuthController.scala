@@ -4,7 +4,7 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 
-import oauth2._
+import oauth2.ServiceProvider
 import actions._
 import models._
 
@@ -15,7 +15,7 @@ object AuthController extends Controller {
         provider match {
             case "beeminder" =>
                 if (!request.user.isReal) {
-                    Redirect(Service.beeminder.getAuthURI(callback_uri))
+                    Redirect(ServiceProvider.beeminder.getAuthURI(callback_uri))
                 } else {
                     Redirect(routes.Application.index.absoluteURL())
                 }
@@ -23,7 +23,7 @@ object AuthController extends Controller {
             case "facebook" =>
                 if (request.user.isReal) {
                     if (!request.user.fb_service.isDefined) {
-                        Redirect(Service.facebook.getAuthURI(callback_uri, List()))
+                        Redirect(ServiceProvider.facebook.getAuthURI(callback_uri, List()))
                     } else {
                         Redirect(routes.Application.index.absoluteURL())
                     }
@@ -45,7 +45,7 @@ object AuthController extends Controller {
                Logger.info("requesting " + permissions.mkString(","))
 
                Redirect(
-                   Service.facebook.getAuthURI(callback_uri, permissions)
+                   ServiceProvider.facebook.getAuthURI(callback_uri, permissions)
                ).withSession(session - "obtain_permissions")
             }
 
@@ -53,76 +53,95 @@ object AuthController extends Controller {
         }
     }
 
+    private def exchangeFacebookCodeForToken(
+            callback_uri: String,
+            queryString: Map[String, Seq[String]],
+            user: User): Either[String, Unit] = {
+        queryString.get("code") match {
+            case Some(code) => {
+                try {
+                    val token = ServiceProvider.facebook.exchangeCodeForToken(
+                        code.toList(0), callback_uri).get
+
+                    if (user.fb_service.isDefined) {
+                        // Update the old service
+                        val fb = user.fb_service.get
+                        fb.token = token.token
+                        fb.expiry = Some(token.expiry)
+                        fb.save()
+                    } else {
+                        val idPayload = ServiceProvider.facebook.getResource(
+                            "/me",
+                            token.token,
+                            Map("fields" -> "id")
+                        ).get
+
+                        Logger.info(idPayload.toString)
+
+                        val username = (idPayload \ "id").as[String]
+
+                        // Create a new one, because it doesn't exist yet
+                        val fb = Service.create(
+                            "facebook",
+                            user.id,
+                            username,
+                            token.token,
+                            Some(token.expiry)
+                        )
+
+                        user.fb_service = Some(fb)
+                        user.save()
+                    }
+
+                    Right()
+                } catch {
+                    // TODO(sandy): in an ideal world, we would try again
+                    case e: NoSuchElementException => Left("Unable to connect to Facebook")
+                }
+            }
+
+            case None => {
+                Left("Unable to connect to Facebook")
+            }
+        }
+    }
+
     def callback(provider: String) = UserAware { implicit request =>
-        // TODO(sandy): this is super ugly, clean it up
         provider match {
             case "facebook" => {
-                val callback_uri = "http://" + request.host + "/auth/" + provider + "/callback"
-
-                request.getQueryString("code") match {
-                    case Some(code) => {
-                        val token = Service.facebook.exchangeCodeForToken(code, callback_uri).get
-
-                        if (request.user.fb_service.isDefined) {
-                            // Update the old service
-                            val fb = request.user.fb_service.get
-                            fb.token = token.token
-                            fb.expiry = Some(token.expiry)
-                            fb.save()
-                        } else {
-                            // TODO(sandy): this can fail
-                            val idPayload = Service.facebook.getResource(
-                                "/me",
-                                token.token,
-                                Map("fields" -> "id")
-                            ).get
-
-                            Logger.info(idPayload.toString)
-
-                            val username = (idPayload \ "id").as[String]
-
-                            // Create a new one, because it doesn't exist yet
-                            val fb = Service.create(
-                                "facebook",
-                                username,
-                                token.token,
-                                Some(token.expiry)
-                            )
-
-                            request.user.fb_service = Some(fb)
-                            request.user.save()
-                        }
-
-                        // TODO(sandy): should be able to redirect here back to goal creation
-                    }
-
-                    case None => {
-                        // TODO(sandy): what happens here?
-                    }
-                }
-
-                session.get("redirect_to") match {
-                    case Some(url) => Redirect(url).withSession(session - "redirect_to")
-                    case None => Ok
+                exchangeFacebookCodeForToken(
+                    routes.AuthController.callback("facebook").absoluteURL(),
+                    request.queryString,
+                    request.user
+                ) match {
+                    // TODO: make this show an error page?
+                    case Left(error) => InternalServerError(error)
+                    case Right(_) => Redirect(
+                        request.session("redirect_to")
+                    ).withSession(session - "redirect_to")
                 }
             }
 
             case "beeminder" => {
                 val token = request.getQueryString("access_token").get
-                val payload = Service.beeminder.getResource("/me.json", token).get
+                val payload = ServiceProvider.beeminder.getResource("/me.json", token).get
                 val username = (payload \ "username").as[String]
 
                 val user = User.getByUsername(username) match {
-                    case Some(u) => {
-                        u.bee_service.token = token
-                        u.bee_service.save()
-                        u
+                    case Some(user) => {
+                        user.bee_service.token = token
+                        user.bee_service.save()
+                        user
                     }
                     case None => {
                         User.create(
                             username,
                             Seq(),
-                            Service.create("beeminder", username, token, None),
+                            // TOTAL HACK(sandy): this is bad bad bad bad
+                            // because we don't know what their uid is! Let's hope
+                            // nobody ever does anything with this (since we don't
+                            // need it for beeminder services)
+                            Service.create("beeminder", 0, username, token, None),
                             None
                         )
                     }

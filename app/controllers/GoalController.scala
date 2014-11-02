@@ -7,7 +7,8 @@ import play.api.data._
 import play.api.data.Forms._
 import org.scala_tools.time.Imports._
 
-import oauth2._
+import oauth2.ServiceProvider
+
 import actions._
 import models._
 import plugins._
@@ -34,8 +35,7 @@ object GoalController extends Controller {
                 goal.rawOptions = goalSettings.options
                 goal.save()
 
-                // TODO(sandy): point this somewhere useful
-                Ok("saved!")
+                Redirect(routes.Application.index.absoluteURL())
             }
 
             case None => NotFound
@@ -108,21 +108,24 @@ object GoalController extends Controller {
             "goalval" -> (52 * goalForm.perWeek).toString
         )
 
+        val user = request.user
         val goalSettings = getGoalSettings(plugin, request.body.asFormUrlEncoded.get)
 
-        val user = request.user
-        val result = Service.beeminder.post(
-            "/users/" + user.username + "/goals.json",
-            user.bee_service.token,
-            defaultParams ++ goalSettings.requestParams
-        )
+        // Try contacting Beeminder 3 times
+        (1 to 3).find { _ =>
+            ServiceProvider.beeminder.post(
+                "/users/" + user.username + "/goals.json",
+                user.bee_service.token,
+                defaultParams ++ goalSettings.requestParams
+            ).isDefined
+        } match {
+            case Some(_) => {
+                Goal.create(plugin, user, goalForm.slug, goalForm.title, goalSettings.options)
+                Redirect(routes.Application.index.absoluteURL())
+            }
 
-        if (result.isDefined) {
-            Goal.create(plugin, user, goalForm.slug, goalForm.title, goalSettings.options)
-            Redirect(routes.Application.index.absoluteURL())
-        } else {
-            // TODO(sandy): do something smart here
-            InternalServerError
+            // TODO(sandy): ideally show a template if this happens
+            case None => InternalServerError("Unable to contact beeminder. Maybe their servers are down?")
         }
     }
 }

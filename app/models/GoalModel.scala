@@ -5,8 +5,9 @@ import play.api.db.slick.DB
 import play.api.db.slick.Config.driver.simple._
 import com.github.nscala_time.time.Imports._
 
-import plugins._
+import plugins.Plugin
 import utils.Flyweight
+import oauth2.ServiceProvider
 
 case class Goal(
         id: Int,
@@ -27,7 +28,7 @@ case class Goal(
     def update() = {
         val points = plugin.update(this)
 
-        Service.beeminder.post(
+        ServiceProvider.beeminder.post(
             "/users/" + owner.username + "/goals/" + slug + "/datapoints.json",
             owner.bee_service.token,
             Map(

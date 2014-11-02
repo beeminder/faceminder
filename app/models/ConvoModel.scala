@@ -56,7 +56,6 @@ object Convo extends Flyweight {
         val now = DateTime.now
 
         val expiredIds = DB.withSession { implicit session =>
-            // TODO(sandy): Not sure how to filter this in the query here
             Table.list
         }.filter(_.expiry <= now).map { convo =>
             convo.delete()

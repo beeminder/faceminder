@@ -31,9 +31,21 @@ class CronActor extends Actor {
         val nextRefresh = DateTime.now + duration
 
         Logger.info("refreshing services")
-        Service.unmanaged.getByProvider("facebook").map { provider =>
-            if (nextRefresh > provider.expiry.get) {
-                provider.refresh()
+        Service.getByProvider("facebook").map { service =>
+            if (nextRefresh > service.expiry.get) {
+                val successful = service.refresh()
+                if (!successful) {
+                    if (service.provider != "facebook") {
+                        // Only facebook provider is allowed to fail refresh
+                        throw new IllegalArgumentException
+                    }
+
+                    service.owner.fb_service = None
+                    service.owner.save()
+
+                    Service.expire(service.id)
+                    service.unmanaged.delete()
+                }
             }
         }
 

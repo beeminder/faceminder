@@ -10,6 +10,7 @@ import play.api.libs.json._
 import org.scala_tools.time.Imports._
 
 import models._
+import oauth2.ServiceProvider
 
 object ChatPlugin extends Plugin {
     def manifest = new Manifest(
@@ -54,7 +55,7 @@ object ChatPlugin extends Plugin {
         // Expensive, so cache it
         val options = goal.options
 
-        Service.facebook.getResource(
+        ServiceProvider.facebook.getResource(
             "/me/inbox",
             goal.owner.fb_service.get.token,
             Map(

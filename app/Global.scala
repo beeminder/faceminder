@@ -26,7 +26,6 @@ object Global extends GlobalSettings {
         cronActor ! Jobs.RefreshServices
     }
 
-    // TODO(sandy): do we want to schedule each goal individually? not a bad idea
     Akka.system.scheduler.schedule(60.seconds, updateFrequency.seconds) {
         cronActor ! Jobs.UpdateGoals
     }

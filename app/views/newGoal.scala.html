@@ -15,7 +15,7 @@
 case None => {
     <form method="POST" action="@routes.GoalController.create">
         <input type="hidden" name="pluginId" value="@plugin.manifest.id" />
-        <label>Goal Name:</label> <input type="text" name="title" placeholder="eg. Stay in touch" /> <br />
+        <label>Goal Name:</label> <input type="text" name="title" placeholder="eg. @plugin.manifest.name" /> <br />
         <label>Goal URL:</label> http://beeminder.com/@user.username/<input type="text" name="slug" placeholder="eg. @plugin.manifest.id" /> <br />
         <label>Commit to:</label> <input type="number" name="perWeek" value="@plugin.manifest.perWeekDefault" /> per week <br />
 }
